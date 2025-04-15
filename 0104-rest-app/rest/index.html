@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <title>REST API</title>
+  <style>
+    body {
+      background: #222;
+      font-family: "Avenir", Arial, Helvetica, sans-serif;
+      padding: 20px;
+      margin: 0px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      grid-gap: 30px;
+    }
+
+    h1 {
+      color: #fff;
+      margin-top: 0px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    h3 {
+      font-weight: normal;
+      font-family: "IBM Plex Mono", monospace;
+      color: white;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1rem;
+    }
+
+    pre {
+      font-size: 1rem;
+      color: rgba(255, 255, 255, 0.7);
+      font-family: "IBM Plex Mono", monospace;
+    }
+
+    span {
+      color: greenyellow;
+    }
+
+    .form {
+      display: grid;
+      grid-gap: 10px;
+    }
+
+    input,
+    textarea {
+      font-size: 0.9rem;
+      font-family: "IBM Plex Mono", monospace;
+      border: none;
+      padding: 10px;
+      border-radius: 2px;
+    }
+
+    input[type="file"] {
+      color: white;
+    }
+
+    textarea {
+      font-size: 1rem;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-gap: 10px;
+      margin-top: 20px;
+      margin-bottom: 10px;
+    }
+
+    .token {
+      font-size: 0.8rem;
+    }
+
+    button {
+      font-size: 1rem;
+      border: none;
+      border-radius: 2px;
+      padding: 10px 0;
+      background: #87f;
+      color: white;
+      cursor: pointer;
+    }
+
+    .result {
+      overflow-x: scroll;
+    }
+
+    .result::-webkit-scrollbar {
+      width: 10px;
+      height: 5px;
+    }
+
+    .result::-webkit-scrollbar-track {
+      background: #222;
+      border-radius: 0px;
+    }
+
+    .result::-webkit-scrollbar-thumb {
+      background: greenyellow;
+      border-radius: 0px;
+    }
+
+    .v-enter {
+      opacity: 0;
+      transform: translate3d(0, -20px, 0);
+    }
+
+    .v-leave-to {
+      opacity: 0;
+      transform: translate3d(0, 20px, 0);
+    }
+
+    .v-enter-active,
+    .v-leave-active {
+      transition: all 0.3s;
+    }
+
+    @media screen and (min-width: 700px) {
+      .controls {
+        min-height: 100vh;
+      }
+    }
+
+    footer {
+      grid-row: 2;
+    }
+
+    #loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      pointer-events: none;
+      opacity: 0;
+      transition: all 0.3s;
+      border-radius: 50%;
+      border: 8px solid #87f;
+      border-right-color: transparent;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <section class="grid">
+    <div class="controls">
+      <h1>Rest (fetch / jwt)
+        <span id="loading"></span>
+      </h1>
+      <div class="actions">
+        <button onclick="handleRequest('GET')">GET</button>
+        <button onclick="handleRequest('POST')">POST</button>
+        <button onclick="handleRequest('PUT')">PUT</button>
+        <button onclick="handleRequest('DELETE')">DELETE</button>
+      </div>
+      <div class="form">
+        <input type="text" id="url" placeholder="url">
+        <input type="text" id="token" placeholder="jwt token" class="token">
+        <div>
+          <input type="text" id="fileID" placeholder="file id">
+          <input type="file" id="fileInput" onchange="previewFile(event)">
+        </div>
+        <textarea rows="10" id="body" placeholder="key: value"></textarea>
+        <pre id="jsonPreview"></pre>
+      </div>
+    </div>
+    <div class="response">
+      <div class="result" id="result">
+        <!-- Status, Data, Headers, Request, Config will go here -->
+      </div>
+    </div>
+    <footer>🐺</footer>
+  </section>
+
+  <script>
+    let file;
+
+    // save each field to local storage
+    // dont select file input
+    document.querySelectorAll('input, textarea').forEach(input => {
+      if (input.type === 'file') return;
+      input.addEventListener('change', e => {
+        localStorage.setItem(e.target.id, e.target.value);
+      });
+    });
+
+    // load saved fields
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('input, textarea').forEach(input => {
+        if (input.type === 'file') return;
+        input.value = localStorage.getItem(input.id);
+        // trigger input event to update json preview
+        input.dispatchEvent(new Event('input'));
+      });
+    });
+
+    function isValidJSON(text) {
+      try {
+        JSON.parse(text);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function previewFile(event) {
+      file = event.target.files[0];
+    }
+
+    function formatJSON(json) {
+      json = JSON.stringify(json, null, 1);
+      json = json.replace(/["][-\w]+["]\:/g, "<span>$&</span>");
+      return json;
+    }
+
+    // check if body is valid JSON, and update the info showing if is or not
+    document.getElementById('body').addEventListener('input', e => {
+      const bodyText = e.target.value;
+      const jsonPreview = document.getElementById('jsonPreview');
+      if (isValidJSON(bodyText)) {
+        jsonPreview.innerHTML = formatJSON(JSON.parse(bodyText));
+      } else {
+        jsonPreview.innerHTML = 'JSON Mal Formatado';
+      }
+    });
+
+    const getHeaders = (headers) => {
+      let headerObj = {};
+      const keys = headers.keys();
+      let header = keys.next();
+      while (header.value) {
+        headerObj[header.value] = headers.get(header.value);
+        header = keys.next();
+      }
+      return headerObj;
+    };
+
+    async function handleRequest(method) {
+      const url = document.getElementById('url').value;
+      const token = document.getElementById('token').value;
+      const bodyText = document.getElementById('body').value;
+      const fileID = document.getElementById('fileID').value;
+      const resultElement = document.getElementById('result');
+      const file = document.getElementById('fileInput').files[0];
+
+      const fetchHeaders = {
+        'Content-Type': 'application/json'
+      };
+
+      if (token) {
+        fetchHeaders['Authorization'] = `Bearer ${token}`;
+      }
+
+      const fetchInit = {
+        method,
+        headers: fetchHeaders
+      };
+      if (bodyText && isValidJSON(bodyText) && method !== 'GET') {
+        fetchInit.body = JSON.stringify(JSON.parse(bodyText));
+      }
+
+      if (file) {
+        const formData = new FormData();
+        const object = JSON.parse(bodyText);
+        const keys = Object.keys(object);
+        keys.forEach(key => {
+          formData.append(key, object[key]);
+        });
+        formData.append(fileID, file);
+        delete fetchHeaders['Content-Type'];
+        fetchInit.headers = fetchHeaders;
+        fetchInit.body = formData;
+      }
+
+      try {
+        document.getElementById('loading').style.opacity = 1;
+        const response = await fetch(url, fetchInit);
+        const jsonData = await response.json();
+
+        if (jsonData.token) {
+          localStorage.setItem('token', jsonData.token);
+          document.getElementById('token').value = jsonData.token;
+        }
+
+        console.log(response);
+
+        resultElement.innerHTML = `
+        <h3>Status</h3><pre>${formatJSON(response.status)}</pre>
+        <h3>Data</h3><pre>${formatJSON(jsonData)}</pre>
+        <h3>Headers</h3><pre>${formatJSON(getHeaders(response.headers))}</pre>
+        `;
+
+      } catch (error) {
+        resultElement.innerHTML = `<h3>Error</h3><pre>${error}</pre>`;
+      } finally {
+        document.getElementById('loading').style.opacity = 0;
+      }
+    }
+  </script>
+</body>
+
+</html>

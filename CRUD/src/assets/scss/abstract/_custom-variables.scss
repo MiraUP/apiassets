@@ -1,0 +1,63 @@
+$prefix: '';
+
+$blue: #3742f9;
+$indigo: #6610f2;
+$purple: #6f42c1;
+$pink: #d63384;
+$red: #ba3a31;
+$orange: #f4a003;
+$yellow: #ffc107;
+$green: #1abb9b;
+$teal: #20c997;
+$cyan: #48dafa;
+
+$white: #dfe0e4;
+$gray-100: #ced0d5;
+$gray-200: #bdc0c6;
+$gray-300: #acb0b8;
+$gray-400: #9ba0a9;
+$gray-500: #8a909a;
+$gray-600: #79808b;
+$gray-700: #68707c;
+$gray-800: #57606e;
+$gray-900: #46505f;
+$black: #354050;
+$black-1000: darken($black, 5%);
+$black-1100: darken($black, 10%);
+$black-1200: darken($black, 15%);
+$black-1300: darken($black, 20%);
+$black-1400: darken($black, 25%);
+
+$theme-colors: (
+  'primary': $blue,
+  'secondary': $indigo,
+  'success': $green,
+  'danger': $red,
+  'warning': $orange,
+  'info': $cyan,
+  'light': $white,
+  'dark': $black,
+);
+
+$grays: (
+  '100': $gray-100,
+  '200': $gray-200,
+  '300': $gray-300,
+  '400': $gray-400,
+  '500': $gray-500,
+  '600': $gray-600,
+  '700': $gray-700,
+  '800': $gray-800,
+  '900': $gray-900,
+  '1000': $black-1000,
+  '1100': $black-1100,
+  '1200': $black-1200,
+  '1300': $black-1300,
+  '1400': $black-1400,
+);
+
+$form-switch-color: rgba($white, 0.25) !default;
+$form-switch-checked-color: $white !default;
+$form-switch-bg-image: url("data:image/svg+xml,<%3Fxml version='1.0' encoding='UTF-8'%3F><svg xmlns='http://www.w3.org/2000/svg' version='1.1' viewBox='0 0 18 18'><path class='st0' d='M9,2h0c1.2,0,2.2,1,2.2,2.2v9.6c0,1.2-1,2.2-2.2,2.2h0c-3.9,0-7-3.1-7-7h0c0-3.9,3.1-7,7-7Z' fill='#{$form-switch-color}'/></svg>") !default;
+$form-switch-focus-bg-image: url("data:image/svg+xml,<%3Fxml version='1.0' encoding='UTF-8'%3F><svg xmlns='http://www.w3.org/2000/svg' version='1.1' viewBox='0 0 18 18'><path class='st0' d='M9,2h0c1.2,0,2.2,1,2.2,2.2v9.6c0,1.2-1,2.2-2.2,2.2h0c-3.9,0-7-3.1-7-7h0c0-3.9,3.1-7,7-7Z' fill='#{$form-switch-color}'/></svg>") !default;
+$form-switch-checked-bg-image: url("data:image/svg+xml,<%3Fxml version='1.0' encoding='UTF-8'%3F><svg xmlns='http://www.w3.org/2000/svg' version='1.1' viewBox='0 0 18 18'><rect class='st0' x='2' y='2' width='14' height='14' rx='7' ry='7' fill='#{$form-switch-checked-color}'/></svg>") !default;
