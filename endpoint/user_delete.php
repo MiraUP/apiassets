@@ -124,7 +124,7 @@ function api_user_delete(WP_REST_Request $request) {
  * Registra a rota da API para exclusão de usuário.
  */
 function register_api_user_delete() {
-  register_rest_route('api', '/user', [
+  register_rest_route('api/v1', '/user', [
     'methods'             => WP_REST_Server::DELETABLE,
     'callback'            => 'api_user_delete',
     'permission_callback' => function () {

@@ -10,77 +10,66 @@
  * @return WP_REST_Response|WP_Error Resposta da API com o resultado da operação ou erro.
  */
 function api_taxonomy_delete(WP_REST_Request $request) {
-    // Verifica o rate limiting
-    if (is_rate_limit_exceeded('delete_taxonomy')) {
-      return new WP_Error('rate_limit_exceeded', 'Limite de requisições excedido.', ['status' => 429]);
-    }
+  // Obtém o usuário atual
+  $user = wp_get_current_user();
+  $user_id = (int) $user->ID;
+  
+  // Verificar autenticação
+  if ($error = Permissions::check_authentication($user)) {
+    return $error;
+  }
 
-    // Obtém o usuário atual
-    $user = wp_get_current_user();
-    $user_id = (int) $user->ID;
+  // Verifica rate limiting
+  if ($error = Permissions::check_rate_limit('taxonomy_delete-' . $user_id, 10)) {
+    return $error;
+  }
+  
+  // Verifica o status da conta do usuário
+  if ($error = Permissions::check_account_status($user)) {
+    return $error;
+  }
+      
+  // Restringe a ação do usuário por função
+  if ($error = Permissions::check_user_roles($user, ['editor', 'administrator'])) {
+    return $error;
+  }
 
-    // Verifica se o usuário está logado
-    if ($user_id === 0) {
-      return new WP_Error('unauthorized', 'Usuário não autenticado.', ['status' => 401]);
-    }
+  // Sanitiza e valida os dados de entrada
+  $term_id = (int) sanitize_text_field($request['term_id']);
+  $taxonomy = sanitize_text_field($request['taxonomy']);
 
-    // Verifica se o usuário tem um dos roles permitidos
-    $allowed_roles = ['administrator', 'editor'];
-    $has_permission = false;
+  // Verifica se os campos obrigatórios foram fornecidos
+  if (empty($term_id)) {
+    return new WP_Error('missing_term_id', 'O ID do termo é obrigatório.', ['status' => 400]);
+  }
+  if (empty($taxonomy)) {
+    return new WP_Error('missing_taxonomy', 'Selecione o tipo de taxonomia.', ['status' => 400]);
+  }
 
-    foreach ($allowed_roles as $role) {
-      if (in_array($role, $user->roles)) {
-        $has_permission = true;
-        break;
-      }
-    }
+  // Verifica se a taxonomia existe
+  $term_exists = term_exists($term_id, $taxonomy);
+  if ($term_exists === 0 || $term_exists === null) {
+    return new WP_Error('taxonomy_not_found', 'Taxonomia não encontrada.', ['status' => 404]);
+  }
 
-    if (!$has_permission) {
-      return new WP_Error('forbidden', 'Você não tem permissão para deletar taxonomias.', ['status' => 403]);
-    }
+  // Deleta a taxonomia
+  $deleted = wp_delete_term($term_id, $taxonomy);
 
-    // Verifica o status da conta do usuário
-    $status_account = get_user_meta($user_id, 'status_account', true);
-    if ($status_account === 'pending') {
-      return new WP_Error('account_pending', 'Sua conta está pendente de aprovação.', ['status' => 403]);
-    }
+  if (is_wp_error($deleted)) {
+    return new WP_Error('taxonomy_deletion_failed', 'Falha ao deletar a taxonomia.', ['status' => 500]);
+  }
 
-    // Sanitiza e valida os dados de entrada
-    $term_id = (int) sanitize_text_field($request['term_id']);
-    $taxonomy = sanitize_text_field($request['taxonomy']);
-
-    // Verifica se os campos obrigatórios foram fornecidos
-    if (empty($term_id)) {
-      return new WP_Error('missing_term_id', 'O ID do termo é obrigatório.', ['status' => 400]);
-    }
-    if (empty($taxonomy)) {
-      return new WP_Error('missing_taxonomy', 'Selecione o tipo de taxonomia.', ['status' => 400]);
-    }
-
-    // Verifica se a taxonomia existe
-    $term_exists = term_exists($term_id, $taxonomy);
-    if ($term_exists === 0 || $term_exists === null) {
-      return new WP_Error('taxonomy_not_found', 'Taxonomia não encontrada.', ['status' => 404]);
-    }
-
-    // Deleta a taxonomia
-    $deleted = wp_delete_term($term_id, $taxonomy);
-
-    if (is_wp_error($deleted)) {
-      return new WP_Error('taxonomy_deletion_failed', 'Falha ao deletar a taxonomia.', ['status' => 500]);
-    }
-
-    return rest_ensure_response([
-      'success' => true,
-      'message' => 'Taxonomia deletada com sucesso.',
-    ]);
+  return rest_ensure_response([
+    'success' => true,
+    'message' => 'Taxonomia deletada com sucesso.',
+  ]);
 }
 
 /**
  * Registra a rota da API para deletar taxonomia.
  */
 function register_api_taxonomy_delete() {
-  register_rest_route('api', '/taxonomy', [
+  register_rest_route('api/v1', '/taxonomy', [
     'methods'             => WP_REST_Server::DELETABLE,
     'callback'            => 'api_taxonomy_delete',
     'permission_callback' => function () {

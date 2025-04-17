@@ -10,43 +10,29 @@
  * @return WP_REST_Response|WP_Error Resposta da API.
  */
 function api_notifications_post(WP_REST_Request $request) {
-  // Verifica rate limiting
-  if (is_rate_limit_exceeded('create_notification')) {
-    return new WP_Error(
-      'rate_limit_exceeded',
-      'Too many requests. Please try again later.',
-      ['status' => 429]
-    );
+  // Obtém o usuário atual
+  $user = wp_get_current_user();
+  $user_id = (int) $user->ID;
+
+  // Verificar autenticação
+  if ($error = Permissions::check_authentication($user)) {
+    return $error;
   }
 
-  // Usuário Atual
-  $current_user = wp_get_current_user();
-  if (!$current_user->exists()) {
-    return new WP_Error(
-      'unauthorized',
-      'Usuário não autenticado.',
-      ['status' => 401]
-    );
+  // Verifica rate limiting
+  if ($error = Permissions::check_rate_limit('notification_post-' . $user_id, 25)) {
+    return $error;
   }
-  
+
   // Verifica o status da conta do usuário
-  $account_status = get_user_meta($current_user->ID, 'status_account', true);
-  if ($account_status === 'pending') {
-  return new WP_Error(
-    'account_not_activated',
-      'Sua conta não está ativada.',
-      ['status' => 403]
-    );
+  if ($error = Permissions::check_account_status($user)) {
+    return $error;
   }
       
-      // Verifica se o usuário tem permissão de administrador
-  if (!current_user_can('administrator')) {
-  return new WP_Error(
-      'insufficient_permissions',
-      'Você não tem permissão para executar esta ação.',
-      ['status' => 403]
-    );
-  }
+  // Restringe a busca ao próprio usuário se não for administrador
+  if ($error = Permissions::check_user_roles($user, ['administrator'])) {
+    return $error;
+  }      
       
   // Sanitize e valida os dados de entrada
   $notification_data = [
@@ -95,7 +81,7 @@ function api_notifications_post(WP_REST_Request $request) {
 
   // Cria notificação
   $notification_result = add_notification(
-    $current_user->ID,
+    $user_id,
     $notification_data['category'],
     $notification_data['message'],
     $notification_data['title'],
@@ -104,30 +90,28 @@ function api_notifications_post(WP_REST_Request $request) {
     $notification_data['user_id'] ?? 0
   );
 
-    if (is_wp_error($notification_result)) {
-        return $notification_result;
-    }
+  if (is_wp_error($notification_result)) {
+    return $notification_result;
+  }
 
-    // Prepare response
-    $response_data = [
-        'success' => true,
-        'message' => 'Notificação criada com sucesso.',
-        'data'    => [
-            'notification_id' => $notification_result['id'] ?? 0,
-            'sent_to'        => $notification_data['user_id'] ?: __('All users', 'miraup'),
-        ],
-    ];
-
-    return rest_ensure_response($response_data, 200);
+  // Prepare response
+  return rest_ensure_response([
+    'success' => true,
+    'message' => 'Notificação criada com sucesso.',
+    'data'    => [
+      'notification_id' => $notification_result['id'] ?? 0,
+      'sent_to'         => $notification_data['user_id'] ?: 'Todos os usuários.',
+    ]
+  ]);
 }
 
 /**
  * Registra as rotas da API de notificação
  */
 function register_api_notifications_post() {
-  register_rest_route('api', '/notifications', [
-    'methods' => WP_REST_Server::CREATABLE,
-    'callback' => 'api_notifications_post',
+  register_rest_route('api/v1', '/notifications', [
+    'methods'             => WP_REST_Server::CREATABLE,
+    'callback'            => 'api_notifications_post',
     'permission_callback' => function() {
         return is_user_logged_in();
     },

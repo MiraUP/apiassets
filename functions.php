@@ -32,6 +32,7 @@
   require_once $dirbase . '/endpoint/asset_get.php';
   require_once $dirbase . '/endpoint/asset_put.php';
   require_once $dirbase . '/endpoint/asset_delete.php';
+  require_once $dirbase . '/endpoint/new_code_email.php';
 
   require_once $dirbase . '/endpoint/media_search.php';
   require_once $dirbase . '/endpoint/media_post.php';

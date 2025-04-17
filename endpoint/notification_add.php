@@ -47,6 +47,11 @@ add_action('init', 'create_notifications_table');
  * @return bool True se o email foi enviado com sucesso
  */
 function send_notification_email(int $user_id, int $post_id, string $subject, string $message, string $email = null): bool {
+  // Verificar autenticação
+  if ($error = Permissions::check_authentication((int) wp_get_current_user()->ID)) {
+    return $error;
+  }
+
   $user = get_user_by('ID', $user_id);
   if (!$user || !$user->user_email) {
     return false;
@@ -131,6 +136,11 @@ function add_notification_to_table(
   int $post_id,
   string $marker
 ) {
+  // Verificar autenticação
+  if ($error = Permissions::check_authentication((int) wp_get_current_user()->ID)) {
+    return $error;
+  }
+  
   global $wpdb;
 
   return $wpdb->insert(
@@ -166,14 +176,43 @@ function add_notification(
   $post_id = null,
   int $target_user_id = 0
 ) {
-  // Verifica o rate limiting
-  if (is_rate_limit_exceeded('add_notification')) {
-      return new WP_Error('rate_limit_exceeded', 'Limite de requisições excedido.', ['status' => 429]);
+  // Obtém o usuário atual
+  $user = wp_get_current_user();
+  $user_id = (int) $user->ID;
+
+  // Verificar autenticação
+  if ($error = Permissions::check_authentication($user)) {
+    return $error;
   }
 
-  // Validação básica dos parâmetros
-  if (!in_array($type, ['asset', 'personal', 'system', 'error_report'])) {
-      return new WP_Error('invalid_type', 'Tipo de notificação inválido.', ['status' => 400]);
+  // Verifica o status da conta do usuário
+  if ($error = Permissions::check_account_status($user)) {
+    return $error;
+  }
+
+  // Busca os termos da taxonomia 'notifications'
+  $notification_terms = get_terms([
+    'taxonomy' => 'notification',
+    'hide_empty' => false, // Inclui termos mesmo sem posts associados
+    'fields' => 'slugs' // Retorna apenas os slugs
+  ]);
+
+  // Verifica se a busca foi bem sucedida
+  if (is_wp_error($notification_terms)) {
+    return new WP_Error(
+      'taxonomy_error', 
+      'Erro ao buscar tipos de notificação.', 
+      ['status' => 500]
+    );
+  }
+
+  // Verifica se o tipo está entre os termos válidos
+  if (!in_array($type, $notification_terms)) {
+    return new WP_Error(
+      'invalid_type', 
+      'Tipo de notificação inválido. Tipos válidos: ' . implode(', ', $notification_terms), 
+      ['status' => 400]
+    );
   }
 
   // Converte post_id para inteiro (trata string vazia como 0)
@@ -181,17 +220,17 @@ function add_notification(
 
   // Cria o post da notificação
   $notification_post = [
-      'post_title'   => sanitize_text_field($title),
-      'post_content' => wp_kses_post($content),
-      'post_type'    => 'notification',
-      'post_status'  => 'publish',
-      'post_author'  => $author_id,
+    'post_title'   => sanitize_text_field($title),
+    'post_content' => wp_kses_post($content),
+    'post_type'    => 'notification',
+    'post_status'  => 'publish',
+    'post_author'  => $author_id,
   ];
 
   $notification_id = wp_insert_post($notification_post, true);
   
   if (is_wp_error($notification_id)) {
-      return $notification_id;
+    return $notification_id;
   }
 
   // Adiciona metadados e taxonomia
@@ -201,76 +240,76 @@ function add_notification(
   update_post_meta($notification_id, 'related_post_id', $post_id);
   $updatedCategory = wp_set_post_terms($notification_id, $type, 'notification');
   if (is_wp_error($updatedCategory)) {
-      return new WP_Error('updated_category_failed', 'Erro ao atualizar a categoria da notificação.', ['status' => 500]);
+    return new WP_Error('updated_category_failed', 'Erro ao atualizar a categoria da notificação.', ['status' => 500]);
   }
 
   $affected_users = 0;
 
   // Dispara a notificação para usuário específico
   if ($target_user_id > 0) {
-      $target_user = get_user_by('id', $target_user_id);
-      
-      if (!$target_user) {
-          return new WP_Error('invalid_user', 'Usuário alvo não encontrado.', ['status' => 404]);
-      }
+    $target_user = get_user_by('id', $target_user_id);
+    
+    if (!$target_user) {
+      return new WP_Error('invalid_user', 'Usuário alvo não encontrado.', ['status' => 404]);
+    }
 
-      // Verifica status da conta do usuário alvo
-      $user_account_status = get_user_meta($target_user_id, 'status_account', true);
-      if ($user_account_status !== 'activated') {
-          return new WP_Error('user_account_not_activated', 'Conta do usuário alvo não está ativada.', ['status' => 403]);
-      }
+    // Verifica status da conta do usuário alvo
+    $user_account_status = get_user_meta($target_user_id, 'status_account', true);
+    if ($user_account_status !== 'activated') {
+      return new WP_Error('user_account_not_activated', 'Conta do usuário alvo não está ativada.', ['status' => 403]);
+    }
 
-      // Adiciona notificação na tabela
-      $added = add_notification_to_table($target_user_id, $notification_id, $post_id, $type);
+    // Adiciona notificação na tabela
+    $added = add_notification_to_table($target_user_id, $notification_id, $post_id, $type);
       
-      if ($added > 0) {
-          $affected_users++;
-          
-          // Verifica preferências de email do usuário
-          $email_enabled = (bool) get_user_meta($target_user_id, 'notification_email', true);
-          $type_enabled = get_user_meta($target_user_id, 'notification_' . $type, true);
-          
-          if ($email_enabled && $type_enabled) {
-            send_notification_email($target_user_id, $post_id, $title, $content);
-          }
+    if ($added > 0) {
+      $affected_users++;
+      
+      // Verifica preferências de email do usuário
+      $email_enabled = (bool) get_user_meta($target_user_id, 'notification_email', true);
+      $type_enabled = get_user_meta($target_user_id, 'notification_' . $type, true);
+      
+      if ($email_enabled && $type_enabled) {
+        send_notification_email($target_user_id, $post_id, $title, $content);
       }
+    }
   } 
   // Dispara para todos os usuários ativados
   else {
-      $users = get_users([
-          'meta_key' => 'status_account',
-          'meta_value' => 'activated',
-          'fields' => 'ids',
-      ]);
+    $users = get_users([
+      'meta_key' => 'status_account',
+      'meta_value' => 'activated',
+      'fields' => 'ids',
+    ]);
 
-      foreach ($users as $user_id) {
-          $user_notification_prefs = [
-              'asset'    => (bool) get_user_meta($user_id, 'notification_asset', true),
-              'personal' => (bool) get_user_meta($user_id, 'notification_personal', true),
-              'system'   => (bool) get_user_meta($user_id, 'notification_system', true),
-          ];
+    foreach ($users as $user_id) {
+      $user_notification_prefs = [
+        'asset'    => (bool) get_user_meta($user_id, 'notification_asset', true),
+        'personal' => (bool) get_user_meta($user_id, 'notification_personal', true),
+        'system'   => (bool) get_user_meta($user_id, 'notification_system', true),
+      ];
 
-          if ($user_notification_prefs[$type]) {
-              $added = add_notification_to_table($user_id, $notification_id, $post_id, $type);
-              
-              if ($added) {
-                  $affected_users++;
-                  
-                  if ((bool) get_user_meta($user_id, 'notification_email', true)) {
-                      send_notification_email($user_id, $post_id, $title, $content);
-                  }
-              }
+      if ($user_notification_prefs[$type]) {
+        $added = add_notification_to_table($user_id, $notification_id, $post_id, $type);
+        
+        if ($added) {
+          $affected_users++;
+          
+          if ((bool) get_user_meta($user_id, 'notification_email', true)) {
+            send_notification_email($user_id, $post_id, $title, $content);
           }
+        }
       }
+    }
   }
 
   return [
-      'success' => true,
-      'message' => 'Notificação criada e enviada com sucesso.',
-      'data' => [
-          'notification_id' => $notification_id,
-          'affected_users' => $affected_users,
-          'target_type' => $target_user_id > 0 ? 'specific_user' : 'all_users',
-      ],
+    'success' => true,
+    'message' => 'Notificação criada e enviada com sucesso.',
+    'data' => [
+      'notification_id' => $notification_id,
+      'affected_users' => $affected_users,
+      'target_type' => $target_user_id > 0 ? 'specific_user' : 'all_users',
+    ],
   ];
 }

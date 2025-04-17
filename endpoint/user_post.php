@@ -129,9 +129,9 @@ function api_user_post($request) {
  * Registra a rota da API para cadastro de usuários.
  */
 function register_api_user_post() {
-  register_rest_route('api', '/user', [
-    'methods' => WP_REST_Server::CREATABLE,
-    'callback' => 'api_user_post',
+  register_rest_route('api/v1', '/user', [
+    'methods'             => WP_REST_Server::CREATABLE,
+    'callback'            => 'api_user_post',
     'permission_callback' => '__return_true', // Qualquer um pode acessar
   ]);
 }
