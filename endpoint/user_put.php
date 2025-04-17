@@ -20,7 +20,7 @@ function api_user_put(WP_REST_Request $request) {
   }
 
   // Verifica rate limiting
-  if ($error = Permissions::check_rate_limit('user_put-' . $user_id, 10)) {
+  if ($error = Permissions::check_rate_limit('user_put-' . $user_id, 300)) {
     return $error;
   }
 
@@ -45,11 +45,6 @@ function api_user_put(WP_REST_Request $request) {
     return $error;
   }
 
-  // Verifica se o email já está em uso por outro usuário
-  if ($error = Permissions::check_email_usage($user, $email)) {
-    return $error;
-  }
-
   // Limita a atualização do role e goal apenas para administradores
   if ($error = Permissions::check_role_goal_update( $user, $role, $goal )) {
     return $error;
@@ -68,6 +63,11 @@ function api_user_put(WP_REST_Request $request) {
 
   // Verifica se o email é diferente do cadastro e envia o código de confirmação
   if ($user->user_email !== $email) {
+    // Verifica se o email já está em uso por outro usuário
+    if ($error = Permissions::check_email_usage($user, $email)) {
+      return $error;
+    }
+
     $key_emailconfirm = wp_rand(10000000, 900000000);
     update_user_meta($id, 'email_confirm', $key_emailconfirm);
     update_user_meta($id, 'status_account', 'pending');
@@ -152,7 +152,7 @@ function api_user_put(WP_REST_Request $request) {
  * Registra a rota da API para atualização de dados do usuário.
  */
 function register_api_user_put() {
-  register_rest_route('api', '/user', [
+  register_rest_route('api/v1', '/user', [
       'methods'             => WP_REST_Server::EDITABLE,
       'callback'            => 'api_user_put',
       'permission_callback' => function () {
@@ -232,7 +232,7 @@ function api_user_photo_put(WP_REST_Request $request) {
  * Registra a rota da API para atualização da foto de perfil do usuário.
  */
 function register_api_user_photo_put() {
-  register_rest_route('api', '/user/photo', [
+  register_rest_route('api/v1', '/user/photo', [
     'methods'             => WP_REST_Server::CREATABLE,
     'callback'            => 'api_user_photo_put',
     'permission_callback' => function () {

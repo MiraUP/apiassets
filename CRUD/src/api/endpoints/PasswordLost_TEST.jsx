@@ -13,7 +13,7 @@ const PasswordLostTEST = () => {
 
     try {
       const response = await fetch(
-        'http://miraup.test/json/api/password/lost',
+        'http://miraup.test/json/api/v1/password/lost',
         {
           method: 'POST',
           headers: {

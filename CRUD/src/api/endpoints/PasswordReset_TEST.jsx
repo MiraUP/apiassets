@@ -33,7 +33,7 @@ const PasswordResetTEST = () => {
 
     try {
       const response = await fetch(
-        'http://miraup.test/json/api/password/reset',
+        'http://miraup.test/json/api/v1/password/reset',
         {
           method: 'POST',
           headers: {

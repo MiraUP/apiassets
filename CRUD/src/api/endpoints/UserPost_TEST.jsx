@@ -23,7 +23,7 @@ const UserPostTEST = () => {
     formData.append('statusaccount', statusaccount);
     formData.append('photo', photo);
 
-    fetch('http://miraup.test/json/api/user', {
+    fetch('http://miraup.test/json/api/v1/user', {
       method: 'POST',
       body: formData,
     })

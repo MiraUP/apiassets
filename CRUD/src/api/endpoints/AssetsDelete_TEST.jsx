@@ -7,7 +7,7 @@ const AssetsDeleteTEST = () => {
   const [assetsData, setAssetsData] = React.useState([]);
 
   React.useEffect(() => {
-    fetch(`http://miraup.test/json/api/asset/`, {
+    fetch(`http://miraup.test/json/api/v1/asset/`, {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -26,7 +26,7 @@ const AssetsDeleteTEST = () => {
   function handleSubmit(event) {
     event.preventDefault();
 
-    fetch(`http://miraup.test/json/api/asset/${postid}`, {
+    fetch(`http://miraup.test/json/api/v1/asset/${postid}`, {
       method: 'DELETE',
       headers: {
         Authorization: 'Bearer ' + token,

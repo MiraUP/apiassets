@@ -12,7 +12,7 @@ const TaxonomysPostTEST = () => {
   function handleSubmit(event) {
     event.preventDefault();
 
-    fetch(`http://miraup.test/json/api/taxonomy/`, {
+    fetch(`http://miraup.test/json/api/v1/taxonomy/`, {
       method: 'POST',
       headers: {
         'Content-type': 'application/json',

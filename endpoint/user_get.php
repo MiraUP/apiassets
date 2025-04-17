@@ -20,7 +20,7 @@ function api_user_get($request) {
   }
 
   // Verifica rate limiting
-  if ($error = Permissions::check_rate_limit('user_get-' . $user_id, 100)) {
+  if ($error = Permissions::check_rate_limit('user_get-' . $user_id, 10)) {
     return $error;
   }
 
@@ -74,7 +74,7 @@ function api_user_get($request) {
  * Registra a rota da API para obter informações do usuário atual.
  */
 function register_api_user_get() {
-  register_rest_route('api', '/user', [
+  register_rest_route('api/v1', '/user', [
     'methods' => WP_REST_Server::READABLE,
     'callback' => 'api_user_get',
     'permission_callback' => function() {
@@ -170,9 +170,9 @@ function api_users_get($request) {
  * Registra a rota da API para obter informações de múltiplos usuários.
  */
 function register_api_users_get() {
-  register_rest_route('api', '/users', [
-    'methods' => WP_REST_Server::READABLE,
-    'callback' => 'api_users_get',
+  register_rest_route('api/v1', '/users', [
+    'methods'             => WP_REST_Server::READABLE,
+    'callback'            => 'api_users_get',
     'permission_callback' => function() {
       return is_user_logged_in(); // Apenas usuários autenticados podem acessar
     }, 

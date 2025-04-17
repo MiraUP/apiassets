@@ -9,7 +9,7 @@ const APIPageCommentPost = ({ PostID, newComment }) => {
   const handleSubmit = (event) => {
     event.preventDefault();
 
-    fetch(`http://miraup.test/json/api/comment/${PostID}`, {
+    fetch(`http://miraup.test/json/api/v1/comment/${PostID}`, {
       method: 'POST',
       headers: {
         'Content-type': 'application/json',

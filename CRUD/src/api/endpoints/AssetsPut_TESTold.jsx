@@ -11,7 +11,7 @@ const AssetsPutTEST = () => {
   const [previews, setPreviews] = React.useState([]);
 
   function selectPost(index) {
-    fetch(`http://miraup.test/json/api/asset/${index}`, {
+    fetch(`http://miraup.test/json/api/v1/asset/${index}`, {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -29,7 +29,7 @@ const AssetsPutTEST = () => {
   }
 
   React.useEffect(() => {
-    fetch(`http://miraup.test/json/api/asset/`, {
+    fetch(`http://miraup.test/json/api/v1/asset/`, {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -43,7 +43,7 @@ const AssetsPutTEST = () => {
         return json;
       });
 
-    fetch(`http://miraup.test/json/api/taxonomy?taxonomy=`, {
+    fetch(`http://miraup.test/json/api/v1/taxonomy?taxonomy=`, {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -101,7 +101,7 @@ const AssetsPutTEST = () => {
       emphasis: updatedEmphasis, // Atualiza apenas a propriedade emphasis
     }));
 
-    fetch('http://miraup.test/json/api/asset-put', {
+    fetch('http://miraup.test/json/api/v1/asset-put', {
       method: 'POST',
       headers: {
         'Content-type': 'application/json',
@@ -139,7 +139,7 @@ const AssetsPutTEST = () => {
 
   const deletePreview = (index) => (event) => {
     fetch(
-      `http://miraup.test/json/api/media?asset_id=${postid}&media_id=${index}`,
+      `http://miraup.test/json/api/v1/media?asset_id=${postid}&media_id=${index}`,
       {
         method: 'DELETE',
         headers: {
@@ -200,7 +200,7 @@ const AssetsPutTEST = () => {
       formData.append(`previews${[i]}`, previews[i]);
     }
 
-    fetch('http://miraup.test/json/api/asset-put', {
+    fetch('http://miraup.test/json/api/v1/asset-put', {
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + token,

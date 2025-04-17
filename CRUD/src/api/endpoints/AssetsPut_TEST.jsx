@@ -48,7 +48,7 @@ const PostForm = ({ post, token }) => {
   useEffect(() => {
     const fetchTaxonomies = async (taxonomy, setState) => {
       const response = await fetch(
-        `http://miraup.test/json/api/taxonomy?taxonomy=${taxonomy}`,
+        `http://miraup.test/json/api/v1/taxonomy?taxonomy=${taxonomy}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -99,7 +99,7 @@ const PostForm = ({ post, token }) => {
     const updatedList = emphasisList.filter((_, i) => i !== index);
     setEmphasisList(updatedList);
 
-    fetch('http://miraup.test/json/api/asset-put', {
+    fetch('http://miraup.test/json/api/v1/asset-put', {
       method: 'POST',
       headers: {
         'Content-type': 'application/json',
@@ -153,7 +153,7 @@ const PostForm = ({ post, token }) => {
     setPreviews(updatedPreviews);
 
     fetch(
-      `http://miraup.test/json/api/media?asset_id=${post.id}&media_id=${index}`,
+      `http://miraup.test/json/api/v1/media?asset_id=${post.id}&media_id=${index}`,
       {
         method: 'DELETE',
         headers: {
@@ -219,7 +219,7 @@ const PostForm = ({ post, token }) => {
         formDataToSend.append(`previews${[i]}`, previews[i]);
       }
 
-      const response = await fetch('http://miraup.test/json/api/asset-put', {
+      const response = await fetch('http://miraup.test/json/api/v1/asset-put', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -602,7 +602,7 @@ const AssetsGetTEST = () => {
 
   // Busca a lista de posts ao carregar o componente
   useEffect(() => {
-    fetch('http://miraup.test/json/api/asset', {
+    fetch('http://miraup.test/json/api/v1/asset', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -622,7 +622,7 @@ const AssetsGetTEST = () => {
       // Reseta o post selecionado antes de buscar os novos dados
       setSelectedPost(null);
 
-      fetch(`http://miraup.test/json/api/asset/${selectedSlug}`, {
+      fetch(`http://miraup.test/json/api/v1/asset/${selectedSlug}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

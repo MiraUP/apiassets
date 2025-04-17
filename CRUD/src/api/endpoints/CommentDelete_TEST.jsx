@@ -7,7 +7,7 @@ const APIPageCommentDelete = ({ CommentID }) => {
   const [message, setMessage] = React.useState('');
 
   React.useEffect(() => {
-    fetch(`http://miraup.test/json/api/comment/${comments}`, {
+    fetch(`http://miraup.test/json/api/v1/comment/${comments}`, {
       method: 'DELETE',
       headers: {
         Authorization: 'Bearer ' + token,

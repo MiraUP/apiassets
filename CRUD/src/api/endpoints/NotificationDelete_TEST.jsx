@@ -7,7 +7,7 @@ const NotificationDeleteTEST = () => {
   const [notificationData, setNotificationData] = React.useState([]);
 
   React.useEffect(() => {
-    fetch(`http://miraup.test/json/api/notifications/`, {
+    fetch(`http://miraup.test/json/api/v1/notifications/`, {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -26,7 +26,7 @@ const NotificationDeleteTEST = () => {
   function handleSubmit(event) {
     event.preventDefault();
 
-    fetch(`http://miraup.test/json/api/notifications/${postid}`, {
+    fetch(`http://miraup.test/json/api/v1/notifications/${postid}`, {
       method: 'DELETE',
       headers: {
         Authorization: 'Bearer ' + token,

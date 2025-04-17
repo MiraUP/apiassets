@@ -12,8 +12,8 @@ const MediaGetTEST = () => {
   React.useEffect(() => {
     let URL;
     mediaType === 'user'
-      ? (URL = 'http://miraup.test/json/api/users')
-      : (URL = 'http://miraup.test/json/api/asset');
+      ? (URL = 'http://miraup.test/json/api/v1/users')
+      : (URL = 'http://miraup.test/json/api/v1/asset');
 
     fetch(URL, {
       method: 'GET',
@@ -31,7 +31,7 @@ const MediaGetTEST = () => {
       });
 
     fetch(
-      `http://miraup.test/json/api/media?post-type=${mediaType}&parent=${parent}`,
+      `http://miraup.test/json/api/v1/media?post-type=${mediaType}&parent=${parent}`,
       {
         method: 'GET',
         headers: {
@@ -52,7 +52,7 @@ const MediaGetTEST = () => {
 
   function handleSubmit(event) {
     event.preventDefault();
-    //   fetch(`http://miraup.test/json/api/media`, {
+    //   fetch(`http://miraup.test/json/api/v1/media`, {
     //     method: 'GET',
     //     headers: {
     //       Authorization: 'Bearer ' + token,

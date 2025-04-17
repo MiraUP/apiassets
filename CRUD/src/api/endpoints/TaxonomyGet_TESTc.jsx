@@ -27,7 +27,7 @@ const TaxonomyList = () => {
   const fetchTaxonomies = async (taxonomy) => {
     try {
       const url = new URL(
-        `http://miraup.test/json/api/taxonomy/?taxonomy=${selectedTaxonomy}`,
+        `http://miraup.test/json/api/v1/taxonomy/?taxonomy=${selectedTaxonomy}`,
       );
 
       const response = await fetch(url, {

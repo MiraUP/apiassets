@@ -7,7 +7,7 @@ const NotificationGetTEST = () => {
   const [reads, setRead] = React.useState({});
 
   React.useEffect(() => {
-    fetch(`http://miraup.test/json/api/notifications`, {
+    fetch(`http://miraup.test/json/api/v1/notifications`, {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -45,7 +45,7 @@ const NotificationGetTEST = () => {
     }));
 
     // Envia a requisição para a API
-    fetch(`http://miraup.test/json/api/notifications`, {
+    fetch(`http://miraup.test/json/api/v1/notifications`, {
       method: 'PUT',
       headers: {
         'Content-type': 'application/json',

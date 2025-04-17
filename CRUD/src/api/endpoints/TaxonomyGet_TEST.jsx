@@ -8,7 +8,7 @@ const TaxonomysGetTEST = () => {
   const [message, setMessage] = React.useState({ type: '', text: '' });
 
   React.useEffect(() => {
-    fetch(`http://miraup.test/json/api/taxonomy?taxonomy=${taxonomy}`, {
+    fetch(`http://miraup.test/json/api/v1/taxonomy?taxonomy=${taxonomy}`, {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,

@@ -27,7 +27,7 @@ const MediaSearchTEST = () => {
         icon_style: filters.icon_style,
       });
 
-      const url = `http://miraup.test/json/api/media-search?${params.toString()}`;
+      const url = `http://miraup.test/json/api/v1/media-search?${params.toString()}`;
 
       const response = await fetch(url, {
         headers: {
@@ -61,7 +61,7 @@ const MediaSearchTEST = () => {
   }, [searchQuery]);
 
   React.useEffect(() => {
-    fetch(`http://miraup.test/json/api/taxonomy?taxonomy=${taxonomyName}`, {
+    fetch(`http://miraup.test/json/api/v1/taxonomy?taxonomy=${taxonomyName}`, {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -78,7 +78,7 @@ const MediaSearchTEST = () => {
   }, [taxonomyName]);
 
   React.useEffect(() => {
-    fetch('http://miraup.test/json/api/asset?total=-1', {
+    fetch('http://miraup.test/json/api/v1/asset?total=-1', {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,

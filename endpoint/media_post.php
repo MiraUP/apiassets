@@ -13,26 +13,25 @@ function api_media_post(WP_REST_Request $request) {
   // Obtém o usuário atual
   $user = wp_get_current_user();
   $user_id = (int) $user->ID;
-
-  // Verifica o rate limiting
-  if (is_rate_limit_exceeded('create_asset')) {
-    return new WP_Error('rate_limit_exceeded', 'Limite de requisições excedido.', ['status' => 429]);
+  
+  // Verificar autenticação
+  if ($error = Permissions::check_authentication($user)) {
+    return $error;
   }
 
-  // Verifica se o usuário está logado
-  if ($user_id === 0) {
-    return new WP_Error('unauthorized', 'Usuário não autenticado.', ['status' => 401]);
+  // Verifica rate limiting
+  if ($error = Permissions::check_rate_limit('media_post-' . $user_id, 200)) {
+    return $error;
   }
-
+  
   // Verifica o status da conta do usuário
-  $status_account = get_user_meta($user_id, 'status_account', true);
-  if ($status_account === 'pending') {
-    return new WP_Error('account_pending', 'Sua conta está pendente de aprovação.', ['status' => 403]);
+  if ($error = Permissions::check_account_status($user)) {
+    return $error;
   }
-
-  // Verifica se o usuário tem um dos roles permitidos
-  if (!$user_id || !in_array($user->roles[0], ['contributor', 'author', 'editor', 'administrator'])) {
-    return new WP_Error('forbidden_roles', 'Você não tem permissão para acessar executar essa ação.', ['status' => 403]);
+      
+  // Restringe a ação do usuário por função
+  if ($error = Permissions::check_user_roles($user, ['contributor', 'author', 'editor', 'administrator'])) {
+    return $error;
   }
   
   // Verifica se o ID do post foi fornecido
@@ -47,12 +46,9 @@ function api_media_post(WP_REST_Request $request) {
     return new WP_Error('post_not_found', 'Post não encontrado.', ['status' => 404]);
   }
 
-  // Verifica se o usuário é autor do post ou administrador/editor
-  $is_author = ($asset->post_author == $user_id);
-  $is_admin_or_editor = in_array('administrator', $user->roles) || in_array('editor', $user->roles);
-
-  if (!$is_author && !$is_admin_or_editor) {
-    return new WP_Error('permission_denied', 'Você não tem permissão para alterar este ativo digital.', ['status' => 403]);
+  // Verifica se o usuário é o autor do post ou um administrador
+  if ($error = Permissions::check_post_edit_permission($user, $post_id)) {
+    return $error;
   }
 
   // Verifica se as imagens foram enviadas
@@ -266,12 +262,12 @@ function api_media_post(WP_REST_Request $request) {
  * Endpoint para upload de mídias de imagens e registro em um post.
  */
 function register_api_media_post() {
-    register_rest_route('api', '/media', [
-        'methods'             => WP_REST_Server::CREATABLE,
-        'callback'            => 'handle_meapi_media_postdia_post',
-        'permission_callback' => function() {
-            return is_user_logged_in(); // Apenas usuários autenticados podem acessar
-        },
-    ]);
+  register_rest_route('api/v1', '/media', [
+    'methods'             => WP_REST_Server::CREATABLE,
+    'callback'            => 'api_media_post',
+    'permission_callback' => function() {
+      return is_user_logged_in(); // Apenas usuários autenticados podem acessar
+    },
+  ]);
 }
 add_action('rest_api_init', 'register_api_media_post');

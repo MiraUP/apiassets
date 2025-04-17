@@ -12,7 +12,7 @@ const AssetsGetTEST = () => {
   function handleSubmit(event) {
     event.preventDefault();
 
-    fetch(`http://miraup.test/json/api/asset/${assetId}/`, {
+    fetch(`http://miraup.test/json/api/v1/asset/${assetId}/`, {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -49,7 +49,7 @@ const AssetsGetTEST = () => {
     }));
 
     // Envia a requisição para a API
-    fetch('http://miraup.test/json/api/favorite', {
+    fetch('http://miraup.test/json/api/v1/favorite', {
       method: 'PUT',
       headers: {
         'Content-type': 'application/json',

@@ -12,7 +12,7 @@ const NotificationErrorPost = () => {
   const [error, setError] = React.useState('');
 
   React.useEffect(() => {
-    fetch('http://miraup.test/json/api/asset?total=-1', {
+    fetch('http://miraup.test/json/api/v1/asset?total=-1', {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -28,7 +28,7 @@ const NotificationErrorPost = () => {
   const handleSubmit = (event) => {
     event.preventDefault();
 
-    fetch(`http://miraup.test/json/api/notification-error/`, {
+    fetch(`http://miraup.test/json/api/v1/notification-error/`, {
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -36,7 +36,6 @@ const NotificationErrorPost = () => {
       },
       body: JSON.stringify({
         error_type: notificationType,
-        page,
         title,
         page,
         message,

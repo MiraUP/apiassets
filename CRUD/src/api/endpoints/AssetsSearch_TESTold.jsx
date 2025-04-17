@@ -25,7 +25,7 @@ const AssetSearch = () => {
     const fetchFilterOptions = async () => {
       try {
         const response = await fetch(
-          'http://miraup.test/json/api/taxonomy?taxonomy=compatibility',
+          'http://miraup.test/json/api/v1/taxonomy?taxonomy=compatibility',
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -84,7 +84,7 @@ const AssetSearch = () => {
       });
 
       const response = await fetch(
-        `http://miraup.test/json/api/asset-search?${params.toString()}`,
+        `http://miraup.test/json/api/v1/asset-search?${params.toString()}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

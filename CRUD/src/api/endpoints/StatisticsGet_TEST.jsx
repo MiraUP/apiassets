@@ -25,7 +25,7 @@ const StatisticsDashboard = () => {
 
     try {
       const response = await fetch(
-        `http://miraup.test/json/api/statistics?user_id=${userId}&post_id=${postId}`,
+        `http://miraup.test/json/api/v1/statistics?user_id=${userId}&post_id=${postId}`,
         {
           method: 'GET',
           headers: {
@@ -51,7 +51,7 @@ const StatisticsDashboard = () => {
   useEffect(() => {
     fetchStatistics();
 
-    fetch('http://miraup.test/json/api/asset?total=-1', {
+    fetch('http://miraup.test/json/api/v1/asset?total=-1', {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -63,7 +63,7 @@ const StatisticsDashboard = () => {
       })
       .catch((error) => console.error('Erro:', error));
 
-    fetch('http://miraup.test/json/api/users', {
+    fetch('http://miraup.test/json/api/v1/users', {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,

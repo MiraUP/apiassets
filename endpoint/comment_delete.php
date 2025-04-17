@@ -10,21 +10,23 @@
  * @return WP_REST_Response|WP_Error Resposta da API
  */
 function api_comment_delete(WP_REST_Request $request) {
-  // Verificação de rate limiting
-  if (is_rate_limit_exceeded('delete_comment')) {
-    return new WP_Error('rate_limit_exceeded', 'Limite de requisições excedido.', ['status' => 429]);
-  }
-
-  // Obtém usuário atual e verifica autenticação
+  // Obtém o usuário atual
   $user = wp_get_current_user();
-  if (!$user->exists()) {
-    return new WP_Error( 'unauthorized', 'Usuário não autenticado.', ['status' => 401] );
+  $user_id = (int) $user->ID;
+  
+  // Verificar autenticação
+  if ($error = Permissions::check_authentication($user)) {
+    return $error;
   }
 
-  // Verifica status da conta
-  $account_status = get_user_meta($user->ID, 'status_account', true);
-  if ($account_status === 'pending') {
-    return new WP_Error( 'account_not_activated', 'Sua conta não está ativada.', ['status' => 403] );
+  // Verifica rate limiting
+  if ($error = Permissions::check_rate_limit('comment_delete-' . $user_id, 5)) {
+    return $error;
+  }
+  
+  // Verifica o status da conta do usuário
+  if ($error = Permissions::check_account_status($user)) {
+    return $error;
   }
 
   // Valida e sanitiza o ID do comentário
@@ -41,7 +43,7 @@ function api_comment_delete(WP_REST_Request $request) {
 
   // Verifica se o usuário é o autor do comentário ou um admin/editor
   $is_author = ($comment->user_id == $user->ID);
-  $is_admin_or_editor = in_array('administrator', $user->roles) || in_array('editor', $user->roles);
+  $is_admin_or_editor = in_array('administrator', $user->roles);
   
   if (!$is_author && !$is_admin_or_editor) {
     return new WP_Error( 'permission_denied', 'Você não tem permissão para deletar este comentário.', ['status' => 403] );
@@ -65,16 +67,16 @@ function api_comment_delete(WP_REST_Request $request) {
   ]);
   }
 
-  /**
-   * Registra o endpoint REST para atualização de comentários
-   */
-  function register_api_comment_delete() {
-      register_rest_route('api', '/comment/(?P<id>\d+)', [
-          'methods'  => WP_REST_Server::DELETABLE,
-          'callback' => 'api_comment_delete',
-          'permission_callback' => function() {
-              return is_user_logged_in(); // Apenas usuários autenticados podem acessar
-          },
-      ]);
-  }
-  add_action('rest_api_init', 'register_api_comment_delete');
+/**
+ * Registra o endpoint REST para atualização de comentários
+ */
+function register_api_comment_delete() {
+  register_rest_route('api/v1', '/comment/(?P<id>\d+)', [
+    'methods'             => WP_REST_Server::DELETABLE,
+    'callback'            => 'api_comment_delete',
+    'permission_callback' => function() {
+      return is_user_logged_in(); // Apenas usuários autenticados podem acessar
+    },
+  ]);
+}
+add_action('rest_api_init', 'register_api_comment_delete');

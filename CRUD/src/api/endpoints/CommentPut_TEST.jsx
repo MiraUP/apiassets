@@ -12,7 +12,7 @@ const APIPageCommentPut = ({ PostID, CommentId }) => {
     const fetchComments = async () => {
       try {
         const response = await fetch(
-          `http://miraup.test/json/api/comment/${PostID}`,
+          `http://miraup.test/json/api/v1/comment/${PostID}`,
           {
             method: 'GET',
             headers: {
@@ -50,7 +50,7 @@ const APIPageCommentPut = ({ PostID, CommentId }) => {
 
     try {
       const response = await fetch(
-        `http://miraup.test/json/api/comment/${CommentId}`,
+        `http://miraup.test/json/api/v1/comment/${CommentId}`,
         {
           method: 'PUT',
           headers: {

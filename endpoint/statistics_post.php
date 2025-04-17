@@ -12,24 +12,24 @@
  * Cria a tabela de estatísticas caso ela não exista
  */
 function create_stats_table() {
-    global $wpdb;
-    $table_name = $wpdb->prefix . 'stats';
-    $charset_collate = $wpdb->get_charset_collate();
+  global $wpdb;
+  $table_name = $wpdb->prefix . 'stats';
+  $charset_collate = $wpdb->get_charset_collate();
 
-    if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
-        $sql = "CREATE TABLE $table_name (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
-            user_id bigint(20) NOT NULL,
-            post_id bigint(20) NOT NULL,
-            action_type varchar(20) NOT NULL COMMENT 'download ou view',
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            KEY user_post_action (user_id, post_id, action_type)
-        ) $charset_collate;";
+  if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
+    $sql = "CREATE TABLE $table_name (
+      id bigint(20) NOT NULL AUTO_INCREMENT,
+      user_id bigint(20) NOT NULL,
+      post_id bigint(20) NOT NULL,
+      action_type varchar(20) NOT NULL COMMENT 'download ou view',
+      created_at datetime DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      KEY user_post_action (user_id, post_id, action_type)
+    ) $charset_collate;";
 
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
-    }
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
+  }
 }
 add_action('init', 'create_stats_table');
 
@@ -40,33 +40,23 @@ add_action('init', 'create_stats_table');
  * @return WP_REST_Response|WP_Error Resposta da API com o resultado da operação ou erro.
  */
 function api_statistics_post(WP_REST_Request $request) {
-    // Verifica rate limiting
-    if (is_rate_limit_exceeded('post_stats')) {
-      return new WP_Error(
-          'rate_limit_exceeded', 
-          'Limite de requisições excedido. Tente novamente mais tarde.', 
-          ['status' => 429]
-      );
+  // Obtém o usuário atual
+  $user = wp_get_current_user();
+  $user_id = (int) $user->ID;
+
+  // Verificar autenticação
+  if ($error = Permissions::check_authentication($user)) {
+    return $error;
   }
 
-  // Obtém e valida usuário atual
-  $current_user = wp_get_current_user();
-  if (!$current_user->exists()) {
-      return new WP_Error(
-          'unauthorized',
-          'Usuário não autenticado.',
-          ['status' => 401]
-      );
+  // Verifica rate limiting
+  if ($error = Permissions::check_rate_limit('statistics_get-' . $user_id, 100)) {
+    return $error;
   }
 
-  // Verifica status da conta
-  $account_status = get_user_meta($current_user->ID, 'status_account', true);
-  if ($account_status !== 'activated') {
-      return new WP_Error(
-          'account_not_activated',
-          'Sua conta não está ativada ou não tem permissão.',
-          ['status' => 403]
-      );
+  // Verifica o status da conta do usuário
+  if ($error = Permissions::check_account_status($user)) {
+    return $error;
   }
 
   // Valida e sanitiza os parâmetros
@@ -75,28 +65,16 @@ function api_statistics_post(WP_REST_Request $request) {
 
   // Validações adicionais
   if (empty($post_id)) {
-      return new WP_Error(
-          'missing_parameter',
-          'O ID do ativo é obrigatório.',
-          ['status' => 400]
-      );
+    return new WP_Error( 'missing_parameter', 'O ID do ativo é obrigatório.', ['status' => 400] );
   }
 
   if (!in_array($action_type, ['download', 'view'])) {
-      return new WP_Error(
-          'invalid_action',
-          'Tipo de ação inválido. Use "download" ou "view".',
-          ['status' => 400]
-      );
+    return new WP_Error( 'invalid_action', 'Tipo de ação inválido. Use "download" ou "view".', ['status' => 400] );
   }
 
   $post = get_post($post_id);
   if (!$post) {
-      return new WP_Error(
-          'invalid_post',
-          'O post especificado não existe.',
-          ['status' => 404]
-      );
+    return new WP_Error( 'invalid_post', 'O post especificado não existe.', ['status' => 404] );
   }
 
   global $wpdb;
@@ -115,33 +93,29 @@ function api_statistics_post(WP_REST_Request $request) {
       AND action_type = %s 
       AND created_at > %s 
       LIMIT 1",
-      $current_user->ID,
+      $user_id,
       $post_id,
       $action_type,
       $time_threshold
   ));
 
   if ($existing) {
-      return new WP_Error(
-          'duplicate_action',
-          'Esta ação já foi registrada recentemente para este usuário.',
-          ['status' => 429]
-      );
+    return new WP_Error( 'duplicate_action', 'Esta ação já foi registrada recentemente para este usuário.', ['status' => 429] );
   }
   
   // Registra a ação
   $result = $wpdb->insert(
-      $table_name,
-      [
-          'user_id' => $current_user->ID,
-          'post_id' => $post_id,
-          'action_type' => $action_type
-      ],
-      ['%d', '%d', '%s']
+    $table_name,
+    [
+      'user_id' => $user_id,
+      'post_id' => $post_id,
+      'action_type' => $action_type
+    ],
+    ['%d', '%d', '%s']
   );
 
   if ($result === false) {
-      throw new Exception('Falha ao registrar ação');
+    throw new Exception('Falha ao registrar ação');
   }
 
   // Atualiza o cache de contagem
@@ -151,15 +125,15 @@ function api_statistics_post(WP_REST_Request $request) {
   update_post_meta($post_id, $meta_key, $count);
 
   return rest_ensure_response([
-      'success' => true,
-      'data' => [
-          'record_id' => $wpdb->insert_id,
-          'user_id' => $current_user->ID,
-          'post_id' => $post_id,
-          'action_type' => $action_type,
-          'count' => $count,
-          'timestamp' => current_time('mysql')
-      ]
+    'success' => true,
+    'data' => [
+      'record_id' => $wpdb->insert_id,
+      'user_id' => $user_id,
+      'post_id' => $post_id,
+      'action_type' => $action_type,
+      'count' => $count,
+      'timestamp' => current_time('mysql')
+    ]
   ]);
 }
 
@@ -167,12 +141,12 @@ function api_statistics_post(WP_REST_Request $request) {
  * Registra a rota da API para criar dados estatísticos.
  */
 function register_api_statistics_post() {
-    register_rest_route('api', '/statistics', [
-        'methods' => WP_REST_Server::CREATABLE,
-        'callback' => 'api_statistics_post',
-        'permission_callback' => function() {
-            return is_user_logged_in();
-        },
-    ]);
+  register_rest_route('api/v1', '/statistics', [
+    'methods'             => WP_REST_Server::CREATABLE,
+    'callback'            => 'api_statistics_post',
+    'permission_callback' => function() {
+      return is_user_logged_in();
+    },
+  ]);
 }
 add_action('rest_api_init', 'register_api_statistics_post');

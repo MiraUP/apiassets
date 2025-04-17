@@ -11,8 +11,8 @@ const UserGetTEST = () => {
 
     let URL;
     userquery === false
-      ? (URL = 'http://miraup.test/json/api/user')
-      : (URL = `http://miraup.test/json/api/users/?id-user=${userid}`);
+      ? (URL = 'http://miraup.test/json/api/v1/user')
+      : (URL = `http://miraup.test/json/api/v1/users/?id-user=${userid}`);
 
     fetch(URL, {
       method: 'GET',

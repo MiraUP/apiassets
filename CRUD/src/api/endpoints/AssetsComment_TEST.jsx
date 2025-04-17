@@ -7,7 +7,7 @@ const AssetsCommentTEST = ({ assetId }) => {
   const [newComments, setNewComments] = React.useState('');
 
   React.useEffect(() => {
-    fetch(`http://miraup.test/json/api/comment/${assetId}`, {
+    fetch(`http://miraup.test/json/api/v1/comment/${assetId}`, {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -27,7 +27,7 @@ const AssetsCommentTEST = ({ assetId }) => {
   const handleSubmit = (event) => {
     event.preventDefault();
 
-    fetch(`http://miraup.test/json/api/comment/${assetId}`, {
+    fetch(`http://miraup.test/json/api/v1/comment/${assetId}`, {
       method: 'POST',
       headers: {
         'Content-type': 'application/json',

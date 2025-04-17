@@ -12,7 +12,7 @@ const NotificationPostTEST = () => {
   const [subtitle, setSubtitle] = React.useState('');
 
   React.useEffect(() => {
-    fetch('http://miraup.test/json/api/users', {
+    fetch('http://miraup.test/json/api/v1/users', {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -36,7 +36,7 @@ const NotificationPostTEST = () => {
   const handleSubmit = (event) => {
     event.preventDefault();
 
-    fetch(`http://miraup.test/json/api/notifications`, {
+    fetch(`http://miraup.test/json/api/v1/notifications`, {
       method: 'POST',
       headers: {
         'Content-type': 'application/json',

@@ -37,7 +37,7 @@ const AssetsSearchTEST = () => {
         favorite: filters.favorite,
       });
 
-      const url = `http://miraup.test/json/api/asset-search?${params.toString()}`;
+      const url = `http://miraup.test/json/api/v1/asset-search?${params.toString()}`;
 
       const response = await fetch(url, {
         headers: {
@@ -71,7 +71,7 @@ const AssetsSearchTEST = () => {
   }, [searchQuery]);
 
   React.useEffect(() => {
-    fetch(`http://miraup.test/json/api/taxonomy?taxonomy=${taxonomyName}`, {
+    fetch(`http://miraup.test/json/api/v1/taxonomy?taxonomy=${taxonomyName}`, {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -98,7 +98,7 @@ const AssetsSearchTEST = () => {
     }));
 
     // Envia a requisição para a API
-    fetch('http://miraup.test/json/api/favorite', {
+    fetch('http://miraup.test/json/api/v1/favorite', {
       method: 'PUT',
       headers: {
         'Content-type': 'application/json',

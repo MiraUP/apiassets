@@ -17,7 +17,7 @@ const UpdateUserForm = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await fetch('http://miraup.test/json/api/user', {
+        const response = await fetch('http://miraup.test/json/api/v1/user', {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -51,7 +51,7 @@ const UpdateUserForm = () => {
     e.preventDefault();
 
     try {
-      const response = await fetch('http://miraup.test/json/api/user', {
+      const response = await fetch('http://miraup.test/json/api/v1/user', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

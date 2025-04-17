@@ -13,7 +13,7 @@ const TaxonomysPostTEST = () => {
   const [error, setError] = React.useState('');
 
   React.useEffect(() => {
-    fetch(`http://miraup.test/json/api/taxonomy?taxonomy=${taxonomyType}`, {
+    fetch(`http://miraup.test/json/api/v1/taxonomy?taxonomy=${taxonomyType}`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -42,7 +42,7 @@ const TaxonomysPostTEST = () => {
   }, [taxonomyType]);
 
   React.useEffect(() => {
-    fetch(`http://miraup.test/json/api/taxonomy?taxonomy=${taxonomyType}`, {
+    fetch(`http://miraup.test/json/api/v1/taxonomy?taxonomy=${taxonomyType}`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -73,7 +73,7 @@ const TaxonomysPostTEST = () => {
   function handleSubmit(event) {
     event.preventDefault();
 
-    fetch(`http://miraup.test/json/api/taxonomy/`, {
+    fetch(`http://miraup.test/json/api/v1/taxonomy/`, {
       method: 'PUT',
       headers: {
         'Content-type': 'application/json',

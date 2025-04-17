@@ -65,7 +65,7 @@ const AssetsPostTEST = () => {
       formData.append(`previews-${[i]}`, previews[i]);
     }
 
-    fetch('http://miraup.test/json/api/asset', {
+    fetch('http://miraup.test/json/api/v1/asset', {
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -84,7 +84,7 @@ const AssetsPostTEST = () => {
   }
 
   React.useEffect(() => {
-    fetch(`http://miraup.test/json/api/taxonomy?taxonomy=${taxonomyName}`, {
+    fetch(`http://miraup.test/json/api/v1/taxonomy?taxonomy=${taxonomyName}`, {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,

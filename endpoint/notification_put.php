@@ -10,29 +10,23 @@
  * @return WP_REST_Response|WP_Error Resposta da API
  */
 function api_notifications_put(WP_REST_Request $request) {
-  // Verifica rate limiting
-  if (is_rate_limit_exceeded('put_notification')) {
-    return new WP_Error(
-      'rate_limit_exceeded', 'Limite de requisições excedido. Tente novamente mais tarde', ['status' => 429]
-    );
-  }
-
-  // Obtém e valida usuário atual
+  // Obtém o usuário atual
   $user = wp_get_current_user();
   $user_id = (int) $user->ID;
 
-  if ($user_id === 0) {
-    return new WP_Error(
-      'unauthorized', 'Usuário não autenticado', ['status' => 401]
-    );
+  // Verificar autenticação
+  if ($error = Permissions::check_authentication($user)) {
+    return $error;
   }
 
-  // Verifica status da conta
-  $account_status = get_user_meta($user_id, 'status_account', true);
-  if ($account_status === 'pending') {
-    return new WP_Error(
-      'account_not_activated', 'Sua conta não está ativada.', ['status' => 403]
-    );
+  // Verifica rate limiting
+  if ($error = Permissions::check_rate_limit('notification_post-' . $user_id, 25)) {
+    return $error;
+  }
+
+  // Verifica o status da conta do usuário
+  if ($error = Permissions::check_account_status($user)) {
+    return $error;
   }
 
   // Valida e sanitiza os parâmetros
@@ -64,7 +58,7 @@ function api_notifications_put(WP_REST_Request $request) {
   $notification_exists = $wpdb->get_row(
     $wpdb->prepare(
       "SELECT * FROM {$notifications_table} 
-        WHERE notification_id = %d AND user_id = %d",
+      WHERE notification_id = %d AND user_id = %d",
       $notification_id,
       $user_id
     ),
@@ -93,9 +87,7 @@ function api_notifications_put(WP_REST_Request $request) {
   );
 
   if ($update === false) {
-    return new WP_Error(
-      'update_notification', 'Falha ao atualizar a notificação', ['status' => 500]
-    );
+    return new WP_Error( 'update_notification', 'Falha ao atualizar a notificação', ['status' => 500] );
   }
   
   // Atualiza a tabela de notificações
@@ -127,11 +119,9 @@ function api_notifications_put(WP_REST_Request $request) {
   // Se houver dados adicionais para atualizar, verifica permissões
   $update_data_add = !empty(array_filter($data_add));
   if ($update_data_add) {
-    if (!current_user_can('administrator')) {
-      return new WP_Error(
-        'insufficient_permissions', 'Você não tem permissão para atualizar estes dados', ['status' => 403]
-      );
-    }
+    if ($error = Permissions::check_user_roles($user, ['administrator'])) {
+      return $error;
+    }  
 
     // Atualiza os dados do post de notificação
     $update_data_post = [
@@ -186,7 +176,7 @@ function api_notifications_put(WP_REST_Request $request) {
     $users_received = $wpdb->get_col(
       $wpdb->prepare(
         "SELECT user_id FROM {$notifications_table} 
-          WHERE notification_id = %d",
+        WHERE notification_id = %d",
         $notification_id
       )
     );
@@ -267,9 +257,9 @@ function api_notifications_put(WP_REST_Request $request) {
 * Registra a rota da API para atualização de notificações
 */
 function register_api_notifications_put() {
-  register_rest_route('api', '/notifications', [
-    'methods' => WP_REST_Server::EDITABLE,
-    'callback' => 'api_notifications_put',
+  register_rest_route('api/v1', '/notifications', [
+    'methods'             => WP_REST_Server::EDITABLE,
+    'callback'            => 'api_notifications_put',
     'permission_callback' => function() {
       return is_user_logged_in(); // Apenas usuários autenticados podem acessar
     },

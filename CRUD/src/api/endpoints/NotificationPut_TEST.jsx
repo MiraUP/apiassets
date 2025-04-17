@@ -22,8 +22,8 @@ const NotificationPutTEST = () => {
   React.useEffect(() => {
     setListNotifications([]);
     const url = notificationSelect
-      ? `http://miraup.test/json/api/notifications/${notificationSelect}/`
-      : `http://miraup.test/json/api/notifications/`;
+      ? `http://miraup.test/json/api/v1/notifications/${notificationSelect}/`
+      : `http://miraup.test/json/api/v1/notifications/`;
 
     fetch(url, {
       method: 'GET',
@@ -54,7 +54,7 @@ const NotificationPutTEST = () => {
         return json;
       });
 
-    fetch(`http://miraup.test/json/api/taxonomy?taxonomy=notification`, {
+    fetch(`http://miraup.test/json/api/v1/taxonomy?taxonomy=notification`, {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -68,7 +68,7 @@ const NotificationPutTEST = () => {
       })
       .catch((error) => {});
 
-    fetch('http://miraup.test/json/api/asset?total=-1', {
+    fetch('http://miraup.test/json/api/v1/asset?total=-1', {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -80,7 +80,7 @@ const NotificationPutTEST = () => {
       })
       .catch((error) => console.error('Erro:', error));
 
-    fetch('http://miraup.test/json/api/users', {
+    fetch('http://miraup.test/json/api/v1/users', {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -99,7 +99,7 @@ const NotificationPutTEST = () => {
   const handleSubmit = (event) => {
     event.preventDefault();
 
-    fetch(`http://miraup.test/json/api/notifications/`, {
+    fetch(`http://miraup.test/json/api/v1/notifications/`, {
       method: 'PUT',
       headers: {
         Authorization: 'Bearer ' + token,

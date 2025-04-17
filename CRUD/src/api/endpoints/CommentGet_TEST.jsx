@@ -10,7 +10,7 @@ const APIPageCommentGet = ({ PostID }) => {
   const [commentPutStatus, setCommentPutStatus] = React.useState(false);
 
   React.useEffect(() => {
-    fetch(`http://miraup.test/json/api/comment/${PostID}`, {
+    fetch(`http://miraup.test/json/api/v1/comment/${PostID}`, {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,

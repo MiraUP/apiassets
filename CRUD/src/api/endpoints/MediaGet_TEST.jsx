@@ -22,8 +22,8 @@ function MediaList() {
   React.useEffect(() => {
     let URL;
     postType === 'user'
-      ? (URL = 'http://miraup.test/json/api/users')
-      : (URL = 'http://miraup.test/json/api/asset?total=-1');
+      ? (URL = 'http://miraup.test/json/api/v1/users')
+      : (URL = 'http://miraup.test/json/api/v1/asset?total=-1');
 
     fetch(URL, {
       method: 'GET',
@@ -47,7 +47,7 @@ function MediaList() {
     setError('');
     try {
       const response = await fetch(
-        `http://miraup.test/json/api/media?post-type=${postType}&parent=${parentId}`,
+        `http://miraup.test/json/api/v1/media?post-type=${postType}&parent=${parentId}`,
         {
           method: 'GET',
           headers: {

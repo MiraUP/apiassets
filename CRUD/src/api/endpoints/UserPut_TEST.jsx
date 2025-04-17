@@ -36,7 +36,7 @@ const UserUpdateForm = () => {
       return;
     }
 
-    fetch('http://miraup.test/json/api/user', {
+    fetch('http://miraup.test/json/api/v1/user', {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -78,7 +78,7 @@ const UserUpdateForm = () => {
       return;
     }
 
-    fetch('http://miraup.test/json/api/user', {
+    fetch('http://miraup.test/json/api/v1/user', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -125,7 +125,7 @@ const UserUpdateForm = () => {
     const formData = new FormData(); //Necessário para fazer o Fecth com imagem.
     formData.append('photo', photo);
     if (photo) {
-      fetch('http://miraup.test/json/api/user/photo', {
+      fetch('http://miraup.test/json/api/v1/user/photo', {
         method: 'POST',
         headers: {
           Authorization: 'Bearer ' + token,
@@ -163,6 +163,37 @@ const UserUpdateForm = () => {
       [name]: type === 'checkbox' ? checked : value,
     });
   };
+
+  function handleNewCode() {
+    const token = localStorage.getItem('token');
+    fetch('http://miraup.test/json/api/v1/user/new-code', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + token,
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log(data.data);
+        if (data.success) {
+          setMessage({
+            type: 'success',
+            text: 'Código de confirmação enviado para o email!',
+          });
+        } else {
+          setMessage({
+            type: 'danger',
+            text: data.message || 'Erro ao enviar o código.',
+          });
+        }
+      })
+      .catch((error) => {
+        setMessage({
+          type: 'danger',
+          text: 'Erro na requisição: ' + error.message,
+        });
+      });
+  }
 
   return (
     <div className="p-4">
@@ -242,15 +273,20 @@ const UserUpdateForm = () => {
             </Form.Group>
 
             {userData.email_confirm && (
-              <Form.Group className="mb-3">
-                <Form.Label>Código de Confirmação de Email</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="code_email"
-                  value={userData.code_email}
-                  onChange={handleChange}
-                />
-              </Form.Group>
+              <>
+                <Form.Group className="mb-3">
+                  <Form.Label>Código de Confirmação de Email</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="code_email"
+                    value={userData.code_email}
+                    onChange={handleChange}
+                  />
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Button onClick={handleNewCode}>Reenviar novo código</Button>
+                </Form.Group>
+              </>
             )}
 
             {userData.roles[0] === 'administrator' && (

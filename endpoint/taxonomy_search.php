@@ -10,26 +10,23 @@
  * @return WP_REST_Response|WP_Error Resposta da API.
  */
 function api_taxonomy_search(WP_REST_Request $request) {
-  global $wpdb;
-
-  // Verifica o rate limiting
-  if (is_rate_limit_exceeded('taxonomy_search')) {
-    return new WP_Error('rate_limit_exceeded', 'Limite de requisições excedido.', ['status' => 429]);
-  }
-
   // Obtém o usuário atual
   $user = wp_get_current_user();
   $user_id = (int) $user->ID;
-
-  // Verifica se o usuário está autenticado
-  if ($user_id === 0) {
-    return new WP_Error('unauthorized', 'Usuário não autenticado.', ['status' => 401]);
+  
+  // Verificar autenticação
+  if ($error = Permissions::check_authentication($user)) {
+    return $error;
   }
 
+  // Verifica rate limiting
+  if ($error = Permissions::check_rate_limit('taxonomy_search-' . $user_id, 20)) {
+    return $error;
+  }
+  
   // Verifica o status da conta do usuário
-  $status_account = get_user_meta($user_id, 'status_account', true);
-  if ($status_account !== 'activated') {
-    return new WP_Error('account_not_activated', 'Sua conta não está ativada.', ['status' => 403]);
+  if ($error = Permissions::check_account_status($user)) {
+    return $error;
   }
 
   // Obtém e sanitiza os parâmetros da requisição
@@ -49,6 +46,8 @@ function api_taxonomy_search(WP_REST_Request $request) {
   if (empty($search_query)) {
     return new WP_Error('taxonomy_not_found', 'Informe a categoria de taxonomia que deve ser pesquisada.', ['status' => 400]);
   }
+
+  global $wpdb;
 
   // Prepara a busca direta no banco de dados
   $search_query_like = '%' . $wpdb->esc_like($search_query) . '%';
@@ -119,12 +118,12 @@ function api_taxonomy_search(WP_REST_Request $request) {
  * Registra a rota da API para pesquisa de taxonomias.
  */
 function register_api_taxonomy_search() {
-    register_rest_route('api', '/taxonomy-search', [
-        'methods' => WP_REST_Server::READABLE,
-        'callback' => 'api_taxonomy_search',
-        'permission_callback' => function () {
-            return is_user_logged_in(); // Apenas usuários autenticados podem acessar
-        },
-    ]);
+  register_rest_route('api/v1', '/taxonomy-search', [
+    'methods'             => WP_REST_Server::READABLE,
+    'callback'            => 'api_taxonomy_search',
+    'permission_callback' => function () {
+      return is_user_logged_in(); // Apenas usuários autenticados podem acessar
+    },
+  ]);
 }
 add_action('rest_api_init', 'register_api_taxonomy_search');

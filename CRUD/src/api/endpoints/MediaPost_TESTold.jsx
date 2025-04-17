@@ -25,7 +25,7 @@ const MediaPostTEST = () => {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const response = await fetch('http://miraup.test/json/api/asset/', {
+        const response = await fetch('http://miraup.test/json/api/v1/asset/', {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -115,7 +115,7 @@ const MediaPostTEST = () => {
     });
 
     try {
-      const response = await fetch('http://miraup.test/json/api/media', {
+      const response = await fetch('http://miraup.test/json/api/v1/media', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

@@ -24,7 +24,7 @@ const TaxonomySearchTEST = () => {
         page: filters.page,
       });
 
-      const url = `http://miraup.test/json/api/taxonomy-search?${params.toString()}`;
+      const url = `http://miraup.test/json/api/v1/taxonomy-search?${params.toString()}`;
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,

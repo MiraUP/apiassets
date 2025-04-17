@@ -28,7 +28,7 @@ const UserSearchTEST = () => {
         page: filters.page,
       });
 
-      const url = `http://miraup.test/json/api/user-search?${params.toString()}`;
+      const url = `http://miraup.test/json/api/v1/user-search?${params.toString()}`;
 
       const response = await fetch(url, {
         headers: {

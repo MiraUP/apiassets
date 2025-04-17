@@ -47,7 +47,7 @@ const PostForm = ({ post, token }) => {
       formDataToSend.append('post_id', post.id);
       formDataToSend.append('title', formData.title);
 
-      const response = await fetch('http://miraup.test/json/api/asset-put', {
+      const response = await fetch('http://miraup.test/json/api/v1/asset-put', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -110,7 +110,7 @@ const AssetsPutTEST = () => {
 
   // Busca a lista de posts ao carregar o componente
   useEffect(() => {
-    fetch('http://miraup.test/json/api/asset', {
+    fetch('http://miraup.test/json/api/v1/asset', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -130,7 +130,7 @@ const AssetsPutTEST = () => {
       // Reseta o post selecionado antes de buscar os novos dados
       setSelectedPost(null);
 
-      fetch(`http://miraup.test/json/api/asset/${selectedSlug}`, {
+      fetch(`http://miraup.test/json/api/v1/asset/${selectedSlug}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

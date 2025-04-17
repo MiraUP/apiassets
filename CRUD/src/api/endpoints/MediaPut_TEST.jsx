@@ -18,7 +18,7 @@ const MediaPutTEST = () => {
 
   // Carrega dados iniciais
   React.useEffect(() => {
-    fetch(`http://miraup.test/json/api/asset/`, {
+    fetch(`http://miraup.test/json/api/v1/asset/`, {
       method: 'GET',
       headers: { Authorization: 'Bearer ' + token },
     })
@@ -28,7 +28,7 @@ const MediaPutTEST = () => {
   }, [token]);
 
   React.useEffect(() => {
-    fetch(`http://miraup.test/json/api/taxonomy?taxonomy=${taxonomyName}`, {
+    fetch(`http://miraup.test/json/api/v1/taxonomy?taxonomy=${taxonomyName}`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -60,7 +60,7 @@ const MediaPutTEST = () => {
   // Carrega asset específico
   React.useEffect(() => {
     if (postid) {
-      fetch(`http://miraup.test/json/api/asset/${postid}`, {
+      fetch(`http://miraup.test/json/api/v1/asset/${postid}`, {
         method: 'GET',
         headers: { Authorization: 'Bearer ' + token },
       })
@@ -89,7 +89,7 @@ const MediaPutTEST = () => {
       delete_tag: deleteTag,
     };
 
-    fetch('http://miraup.test/json/api/media/', {
+    fetch('http://miraup.test/json/api/v1/media/', {
       method: 'PUT',
       headers: {
         'Content-type': 'application/json',
@@ -121,7 +121,7 @@ const MediaPutTEST = () => {
         media_id: selectMedia,
       };
 
-      fetch('http://miraup.test/json/api/media/', {
+      fetch('http://miraup.test/json/api/v1/media/', {
         method: 'DELETE',
         headers: {
           'Content-type': 'application/json',

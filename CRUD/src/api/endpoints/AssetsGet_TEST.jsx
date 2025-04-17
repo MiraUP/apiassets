@@ -44,8 +44,8 @@ const AssetsGetTEST = () => {
     event.preventDefault();
 
     const url = assetSlug
-      ? `http://miraup.test/json/api/asset/${assetSlug}/`
-      : `http://miraup.test/json/api/asset/?${params.toString()}`;
+      ? `http://miraup.test/json/api/v1/asset/${assetSlug}/`
+      : `http://miraup.test/json/api/v1/asset/?${params.toString()}`;
 
     fetch(url, {
       method: 'GET',
@@ -76,8 +76,8 @@ const AssetsGetTEST = () => {
 
   React.useEffect(() => {
     const url = assetSlug
-      ? `http://miraup.test/json/api/asset/${assetSlug}/`
-      : `http://miraup.test/json/api/asset/?${params.toString()}`;
+      ? `http://miraup.test/json/api/v1/asset/${assetSlug}/`
+      : `http://miraup.test/json/api/v1/asset/?${params.toString()}`;
 
     fetch(url, {
       method: 'GET',
@@ -118,7 +118,7 @@ const AssetsGetTEST = () => {
     }));
 
     // Envia a requisição para a API
-    fetch('http://miraup.test/json/api/favorite', {
+    fetch('http://miraup.test/json/api/v1/favorite', {
       method: 'PUT',
       headers: {
         'Content-type': 'application/json',
@@ -158,7 +158,7 @@ const AssetsGetTEST = () => {
   React.useEffect(() => {
     statistics &&
       fetch(
-        `http://miraup.test/json/api/statistics?post_id=${postId}&&action_type=${statistics}`,
+        `http://miraup.test/json/api/v1/statistics?post_id=${postId}&&action_type=${statistics}`,
         {
           method: 'POST',
           headers: {
