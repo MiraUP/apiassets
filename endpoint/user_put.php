@@ -68,7 +68,7 @@ function api_user_put(WP_REST_Request $request) {
       return $error;
     }
 
-    $key_emailconfirm = wp_rand(10000000, 900000000);
+    $key_emailconfirm = wp_generate_password(9, false);
     update_user_meta($id, 'email_confirm', $key_emailconfirm);
     update_user_meta($id, 'status_account', 'pending');
     update_user_meta($id, 'new_email', $email);
@@ -119,9 +119,18 @@ function api_user_put(WP_REST_Request $request) {
   // Atualiza status da conta com a confirmação do código enviado por email
   if (!empty($code_email)) {
     $generated_code = get_user_meta($user_id, 'email_confirm', true);
+    $expiration = (int) get_user_meta($user->ID, 'email_confirm_expiration', true);
+
+    if (time() > $expiration) {
+      return new WP_Error('expired_code', 'Código expirado. Por favor, solicite um novo.', ['status' => 400]);
+    }
+
     if ($code_email === $generated_code) {
+      
       $new_email = get_user_meta($user_id, 'new_email', true);
-      wp_update_user(['ID' => $id, 'user_email' => $new_email]);
+      if (!empty($new_email)) {
+        wp_update_user(['ID' => $id, 'user_email' => $new_email]);
+      }
 
       update_user_meta($user_id, 'status_account', 'activated');
       delete_user_meta($user_id, 'email_confirm');
@@ -138,6 +147,8 @@ function api_user_put(WP_REST_Request $request) {
   update_user_meta($id, 'notification_email', $notification_email);
   update_user_meta($id, 'notification_personal', $notification_personal);
   update_user_meta($id, 'notification_system', $notification_system);
+  update_user_meta($id, 'notification_curation', 'true');
+  update_user_meta($id, 'notification_error_report', 'true');
 
   return rest_ensure_response([
     'success' => true,
@@ -241,3 +252,71 @@ function register_api_user_photo_put() {
   ]);
 }
 add_action('rest_api_init', 'register_api_user_photo_put');
+
+
+
+/**
+ * Atualiza a foto de perfil do usuário.
+ *
+ * @param WP_REST_Request $request Objeto de requisição da API.
+ * @return WP_REST_Response|WP_Error Resposta da API com o resultado da atualização ou erro.
+ */
+function api_user_code_put(WP_REST_Request $request) {
+  // Obtém o usuário atual
+  $user = wp_get_current_user();
+  $user_id = (int) $user->ID;
+
+  // Verificar autenticação
+  if ($error = Permissions::check_authentication($user)) {
+    return $error;
+  }
+
+  // Verifica rate limiting
+  if ($error = Permissions::check_rate_limit('user_code_put-' . $user_id, 500)) {
+    return $error;
+  }
+
+  $code_email = sanitize_text_field($request['code_email']);
+
+  if(!empty($code_email)) {
+    $generated_code = get_user_meta($user_id, 'email_confirm', true);
+    $expiration = (int) get_user_meta($user->ID, 'email_confirm_expiration', true);
+
+    if (time() > $expiration) {
+      return new WP_Error('expired_code', 'Código expirado. Por favor, solicite um novo.', ['status' => 400]);
+    }
+
+    if ($code_email === $generated_code) {
+      update_user_meta($user_id, 'status_account', 'activated');
+      delete_user_meta($user_id, 'email_confirm');
+      delete_user_meta($user_id, 'email_confirm_expiration');
+      delete_user_meta($user_id, 'new_email');
+    } else {
+      return new WP_Error('invalid_code', 'Código de confirmação inválido.', ['status' => 400]);
+    }
+  } else {
+    return new WP_Error('missing_code', 'Código não informado.', ['status' => 400]);
+  }
+
+  return rest_ensure_response([
+    'success' => true,
+    'message' => 'Conta Ativada com sucesso.',
+    'data'    => [
+      'user_id' => $id,
+    ],
+  ]);
+}
+
+/**
+ * Registra a rota da API para confirmação do código de e-mail do usuário.
+ */
+function register_api_user_code_put() {
+  register_rest_route('api/v1', '/user/code', [
+    'methods'             => WP_REST_Server::EDITABLE,
+    'callback'            => 'api_user_code_put',
+    'permission_callback' => function () {
+      return is_user_logged_in(); // Apenas usuários autenticados podem acessar
+    },
+  ]);
+}
+add_action('rest_api_init', 'register_api_user_code_put');

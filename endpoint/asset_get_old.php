@@ -29,7 +29,6 @@ function api_assets_get(WP_REST_Request $request) {
     return $error;
   }
 
-
   // Sanitiza e valida os parâmetros de consulta
   $_url = sanitize_text_field($request['url']) ?: '';
   $_total = (int) sanitize_text_field($request['total']) ?: 6;
@@ -44,62 +43,31 @@ function api_assets_get(WP_REST_Request $request) {
   $_origin = sanitize_text_field($request['origin']) ?: '';
   $_favorite = sanitize_text_field($request['favorite']) ?: '';
   $_new = filter_var($request['new'], FILTER_VALIDATE_BOOLEAN);
-  
-
-  if (current_user_can('administrator')) {
-    $_status = 'publish,pending,draft,private'; 
-  } else {
-    $_status = 'publish';
-    
-    add_filter('posts_where', function($where) use ($user_id) {
-      global $wpdb;
-      $where .= $wpdb->prepare(
-        " OR ({$wpdb->posts}.post_author = %d AND {$wpdb->posts}.post_status IN ('pending', 'draft'))",
-        $user_id
-      );
-      return $where;
-    });
-  }
+  $_status = sanitize_text_field($request['status']) ?: 'publish,pending,draft'; // Novo parâmetro
 
   // Busca o Ativo pela URL 
-if(!empty($_url)) {
+  if(!empty($_url)) {
     // Remove a URL base e sanitiza
-    $site_url = trailingslashit(get_site_url());
-    $clean_url = str_replace($site_url, '', $_url);
-    $clean_url = strtok($clean_url, '?#'); // Remove query strings e fragments
-    
-    // Primeiro tenta pelo ID se a URL contiver um número
-    if (preg_match('/\d+/', $clean_url, $matches)) {
-        $post_id = (int) $matches[0];
-        $post = get_post($post_id);
+        $site_url = trailingslashit(get_site_url());
+        $clean_url = str_replace($site_url, '', $_url);
+        $clean_url = strtok($clean_url, '?#'); // Remove query strings
         
-        // Verifica se o post existe e tem status permitido
-        if ($post && in_array($post->post_status, explode(',', $_status))) {
-            // Verifica adicionalmente se o usuário tem permissão para ver posts não publicados
-            if ($post->post_status !== 'publish' && !current_user_can('edit_post', $post->ID)) {
-                return new WP_Error('post_not_found', 'Ativo não encontrado ou não disponível.', ['status' => 404]);
+        // Primeiro tenta pelo ID se a URL contiver um número
+        if (preg_match('/\d+/', $clean_url, $matches)) {
+            $post = get_post($matches[0]);
+            if ($post && in_array($post->post_status, explode(',', $_status))) {
+                $asset = asset_data($post);
+                return rest_ensure_response([
+                    'success' => true,
+                    'message' => 'Ativo encontrado por ID.',
+                    'data'    => $asset,
+                ]);
             }
-            
-            $asset = asset_data($post);
-            return rest_ensure_response([
-                'success' => true,
-                'message' => 'Ativo encontrado por ID.',
-                'data'    => $asset,
-            ]);
         }
-    }
-    
-    // Se não encontrar por ID, tenta pelo slug
-    $post_slug = sanitize_title(basename($clean_url));
-    if (!empty($post_slug)) {
-        // Primeiro tenta encontrar diretamente pelo slug
-        $post = get_page_by_path($post_slug, OBJECT, 'post');
         
-        // Se não encontrou ou não tem permissão, faz uma query mais completa
-        if (!$post || !in_array($post->post_status, explode(',', $_status)) || 
-            ($post->post_status !== 'publish' && !current_user_can('edit_post', $post->ID))) {
-            
-            // Prepara argumentos para a query
+        // Se não encontrar por ID, tenta pelo slug
+        $post_slug = basename($clean_url);
+        if (!empty($post_slug)) {
             $query_args = [
                 'name'           => $post_slug,
                 'post_type'      => 'post',
@@ -107,24 +75,7 @@ if(!empty($_url)) {
                 'posts_per_page' => 1,
             ];
             
-            // Se não é admin, adiciona filtro para permitir ver seus próprios posts
-            if (!current_user_can('administrator')) {
-                add_filter('posts_where', function($where) use ($user_id) {
-                    global $wpdb;
-                    $where .= $wpdb->prepare(
-                        " OR ({$wpdb->posts}.post_author = %d AND {$wpdb->posts}.post_status IN ('pending', 'draft'))",
-                        $user_id
-                    );
-                    return $where;
-                });
-            }
-            
             $query = new WP_Query($query_args);
-            
-            // Remove o filtro após a query
-            if (!current_user_can('administrator')) {
-                remove_filter('posts_where', 'custom_where_filter');
-            }
             
             if ($query->have_posts()) {
                 $post = $query->posts[0];
@@ -135,19 +86,10 @@ if(!empty($_url)) {
                     'data'    => $asset,
                 ]);
             }
-        } else {
-            // Se encontrou diretamente pelo slug e tem permissão
-            $asset = asset_data($post);
-            return rest_ensure_response([
-                'success' => true,
-                'message' => 'Ativo encontrado por slug.',
-                'data'    => $asset,
-            ]);
         }
-    }
-    
-    return new WP_Error('post_not_found', 'Ativo não encontrado.', ['status' => 404]);
-}
+        
+        return new WP_Error('post_not_found', 'Ativo não encontrado.', ['status' => 404]);
+  }
 
   // Converte o autor de login para ID, se necessário
   if (!is_numeric($_user)) {
@@ -275,6 +217,7 @@ if(!empty($_url)) {
     'data'    => $assets,
     'total_pages' => $query->max_num_pages,
     'current_page' => $_page,
+    'post_status' => $args['post_status'] // Retorna os status usados na consulta
   ]);
 }
 
@@ -288,7 +231,14 @@ function register_api_assets_get() {
     'callback'            => 'api_assets_get',
     'permission_callback' => function () {
       return is_user_logged_in(); // Apenas usuários autenticados podem acessar
-    }
+    },
+    'args' => [
+      'status' => [
+        'description' => 'Status dos posts a serem buscados (publish, pending, draft)',
+        'type' => 'string',
+        'default' => 'publish,pending,draft'
+      ]
+    ]
   ]);
 }
 add_action('rest_api_init', 'register_api_assets_get');

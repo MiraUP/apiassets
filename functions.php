@@ -14,6 +14,7 @@
   $dirbase = get_template_directory();
 
   require_once $dirbase . '/endpoint/notification_get.php';
+  require_once $dirbase . '/endpoint/notification_search.php';
   require_once $dirbase . '/endpoint/notification_post.php';
   require_once $dirbase . '/endpoint/notification_add.php';
   require_once $dirbase . '/endpoint/notification_put.php';
@@ -55,7 +56,11 @@
   require_once $dirbase . '/endpoint/statistics_post.php';
 
   require_once $dirbase . '/endpoint/password.php';
+  
+  require_once $dirbase . '/endpoint/curation_post.php';
+  require_once $dirbase . '/endpoint/curation_get.php';
 
+  
   /****** Translation Dictionary ******/
   include('functions/translate_dictionary.php');
 

@@ -9,41 +9,41 @@
  * @param WP_REST_Request $request Objeto de requisição da API.
  * @return WP_REST_Response|WP_Error Resposta da API com o resultado da operação ou erro.
  */
+
+// Define constantes para o tempo de expiração do código de confirmação
+define('CONFIRMATION_CODE_EXPIRATION', 5 * MINUTE_IN_SECONDS); // 15 minutos
+
 function api_new_code_email(WP_REST_Request $request) {  
   // Obtém o usuário atual
   $user = wp_get_current_user();
   $user_id = (int) $user->ID;
+  $email = $user->user_email;
 
   // Verificar autenticação
   if ($error = Permissions::check_authentication($user)) {
     return $error;
   }
-
+  
   // Verifica rate limiting
   if ($error = Permissions::check_rate_limit('statistics_get-' . $user_id, 100)) {
     return $error;
   }
-
-  // Verifica se há um novo e-mail cadastrado
-  $new_email = get_user_meta($user_id, 'new_email', true);
-  //return(['data'=>$new_email]);
   
-  if (!$new_email) {
-    return new WP_Error('missing_email', 'Novo e-mail não encontrado.', ['status' => 400]);
-  }
+  $key_emailconfirm = wp_generate_password(9, false);
+  $confirmation_expiration = time() + CONFIRMATION_CODE_EXPIRATION;
 
-  $key_emailconfirm = wp_rand(10000000, 900000000);
   update_user_meta($user_id, 'email_confirm', $key_emailconfirm);
+  update_user_meta($user_id, 'email_confirm_expiration', $confirmation_expiration);
   update_user_meta($user_id, 'status_account', 'pending');
-
+  
   $subject = 'Novo código de confirmação de Email';
   $message = "Olá, \r\n\r\n";
   $message = "Utilize o código abaixo para confirmar o seu email: \r\n\r\n";
   $message_footer = "\r\n\r\nSe você não iniciou esse processo, entre em contato com o administrador do site.";
   $body = $message . $key_emailconfirm . $message_footer;
-
+  
   $email_sent = send_notification_email($user_id, 0, $subject, $body, $email);
-
+  
   if (!$email_sent) {
     delete_user_meta($id, 'email_confirm');
     return new WP_Error('send_email_failed', 'Falha ao enviar o código de confirmação de email.', ['status' => 400]);

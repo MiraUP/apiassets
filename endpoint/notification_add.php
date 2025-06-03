@@ -48,10 +48,10 @@ add_action('init', 'create_notifications_table');
  */
 function send_notification_email(int $user_id, int $post_id, string $subject, string $message, string $email = null): bool {
   // Verificar autenticação
-  if ($error = Permissions::check_authentication((int) wp_get_current_user()->ID)) {
+  if ($error = Permissions::check_authentication(wp_get_current_user())) {
     return $error;
   }
-
+  
   $user = get_user_by('ID', $user_id);
   if (!$user || !$user->user_email) {
     return false;
@@ -137,7 +137,7 @@ function add_notification_to_table(
   string $marker
 ) {
   // Verificar autenticação
-  if ($error = Permissions::check_authentication((int) wp_get_current_user()->ID)) {
+  if ($error = Permissions::check_authentication(wp_get_current_user())) {
     return $error;
   }
   
@@ -159,7 +159,7 @@ function add_notification_to_table(
  * Adiciona uma nova notificação e envia para os usuários relevantes
  *
  * @param int $author_id ID do autor da notificação
- * @param string $type Tipo de notificação (asset|personal|system)
+ * @param string $type Tipo de notificação (asset|personal|system|curation|error_report)
  * @param string $message Mensagem curta da notificação
  * @param string $title Título da notificação
  * @param string $content Conteúdo detalhado da notificação
@@ -287,6 +287,8 @@ function add_notification(
         'asset'    => (bool) get_user_meta($user_id, 'notification_asset', true),
         'personal' => (bool) get_user_meta($user_id, 'notification_personal', true),
         'system'   => (bool) get_user_meta($user_id, 'notification_system', true),
+        'curation'   => (bool) get_user_meta($user_id, 'notification_curation', true),
+        'error_report'   => (bool) get_user_meta($user_id, 'notification_error_report', true),
       ];
 
       if ($user_notification_prefs[$type]) {

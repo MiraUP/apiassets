@@ -20,7 +20,6 @@ function api_user_post($request) {
   $user_id = (int) $user->ID;
 
   if($user_id > 0) {
-    
     // Verifica o status da conta do usuário
     if ($error = Permissions::check_account_status($user)) {
       return $error;
@@ -81,11 +80,16 @@ function api_user_post($request) {
   add_user_meta($user_id, 'notification_asset', 'true');
   add_user_meta($user_id, 'notification_personal', 'true');
   add_user_meta($user_id, 'notification_system', 'true');
+  add_user_meta($user_id, 'notification_curation', 'true');
+  add_user_meta($user_id, 'notification_error_report', 'true');
   add_user_meta($user_id, 'appearance_system', 'false');
 
   // Cria o código de confirmação registra e enviar por email
-  $key_status_account = wp_generate_password(16, false);
+  $key_status_account = wp_generate_password(9, false);
+  $confirmation_expiration = time() + CONFIRMATION_CODE_EXPIRATION;
+
   $email_confirm = add_user_meta($user_id, 'email_confirm', $key_status_account);
+  add_user_meta($user_id, 'email_confirm_expiration', $confirmation_expiration);
   
   if (!$email_confirm) {
     return new WP_Error('register_failed', 'Falha ao registrar o código de confirmação de email.', ['status' => 500]);
@@ -96,8 +100,8 @@ function api_user_post($request) {
   $message = "Olá, ".$display_name.", receba nossas boas vindas camarada.\r\n\r\nUse o código abaixo para ativar sua conta: \r\n\r\n";
   $message .= $key_status_account . "\r\n\r\n";
   $message .= 'Se você não iniciou esse processo, entre em contato com o administrador do site.';
-
-  $email_sent = send_notification_email($user_id, 0, $subject, $message);
+  $email_sent = send_notification_email($user_id, 0, $subject, $message, $email);
+  return(['message'=>$email_sent]);
 
   if(!$email_sent) {
     return new WP_Error('send_email_failed', 'Falha ao enviar o de código de confirmação de email.', ['status' => 500]);

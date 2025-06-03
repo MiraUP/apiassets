@@ -112,7 +112,7 @@ function api_asset_post(WP_REST_Request $request) {
   $post_data = [
     'post_author' => $user_id,
     'post_type' => 'post',
-    'post_status' => 'publish',
+    'post_status' => 'pending',
     'post_title' => $title,
     'post_content' => $content,
     'tax_input' => [
