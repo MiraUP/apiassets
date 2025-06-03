@@ -44,6 +44,11 @@ const PostForm = ({ post, token }) => {
   const [thumbnail, setThumbnail] = useState(null); // Imagem de thumbnail selecionada
   const [previews, setPreviews] = useState([]); // Lista de imagens de previews selecionadas
 
+  //Curadoria
+  const [postId, setPostId] = useState(post.id); // ID do post para curadoria
+  const [statusCuration, setStatusCuration] = useState(post.status); // Status da curadoria
+  const [messageCuration, setMessageCuration] = useState(''); // Mensagem de sucesso ou erro
+
   // Busca as taxonomias ao carregar o componente
   useEffect(() => {
     const fetchTaxonomies = async (taxonomy, setState) => {
@@ -235,6 +240,42 @@ const PostForm = ({ post, token }) => {
         setMessage({
           type: 'danger',
           text: data.message || 'Erro ao atualizar o post.',
+        });
+      }
+    } catch (error) {
+      setMessage({ type: 'danger', text: 'Erro na conexão com a API.' });
+    }
+  };
+
+  // Envia os dados de curadoria para a API
+  const handleCuration = async (e) => {
+    e.preventDefault();
+
+    try {
+      const response = await fetch('http://miraup.test/json/api/v1/curation', {
+        method: 'POST',
+        headers: {
+          'Content-type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          post_id: postId,
+          status: statusCuration,
+          message: messageCuration,
+        }),
+      });
+
+      const data = await response.json();
+      console.log(data);
+      if (data.success) {
+        setMessage({
+          type: 'success',
+          text: 'Curadoria adicionada com sucesso!',
+        });
+      } else {
+        setMessage({
+          type: 'danger',
+          text: data.message || 'Erro ao adicionar curadoria.',
         });
       }
     } catch (error) {
@@ -589,6 +630,50 @@ const PostForm = ({ post, token }) => {
             Atualizar
           </Button>
         </Form>
+        <br />
+        <hr />
+        <br />
+
+        <Form onSubmit={handleCuration}>
+          <h2 className="mt-4">Curadoria</h2>
+          <Row>
+            <Col md={3}>
+              <Form.Group controlId="statusCuration">
+                <Form.Label>Status</Form.Label>
+                <Form.Control
+                  as="select"
+                  name="statusCuration"
+                  value={statusCuration}
+                  onChange={({ target }) => setStatusCuration(target.value)}
+                >
+                  <option value="publish">Publicado</option>
+                  <option value="pending">Pendente</option>
+                  <option value="draft">Suspenso</option>
+                </Form.Control>
+              </Form.Group>
+            </Col>
+            <Col md={9}>
+              <Form.Group controlId="messageCuration">
+                <Form.Label>Mensagem</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  name="messageCuration"
+                  value={messageCuration}
+                  onChange={({ target }) => setMessageCuration(target.value)}
+                />
+              </Form.Group>
+            </Col>
+          </Row>
+          <Button
+            variant="success"
+            size="md"
+            type="submit"
+            className="mt-3 w-100"
+          >
+            Enviar curadoria
+          </Button>
+        </Form>
       </Card.Body>
     </Card>
   );
@@ -631,7 +716,6 @@ const AssetsGetTEST = () => {
         .then((data) => {
           if (data.success) {
             setSelectedPost(data.data);
-            console.log(data.data);
           }
         })
         .catch((error) => console.error('Erro ao buscar post:', error));

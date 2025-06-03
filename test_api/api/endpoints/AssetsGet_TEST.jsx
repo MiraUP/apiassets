@@ -92,6 +92,7 @@ const AssetsGetTEST = () => {
           setAssetsData([]);
         } else {
           setAssetsData(json.data);
+          console.log('Assets Data:', json);
           setSingleAssetData(null);
           setTotalPage(json.total_pages);
 
