@@ -2,12 +2,16 @@ import React from 'react';
 import NotificationGetTEST from '../endpoints/NotificationGet_TEST';
 import NotificationPostTEST from '../endpoints/NotificationPost_TEST';
 import NotificationPutTEST from '../endpoints/NotificationPut_TEST';
+import NotificationSearch from '../endpoints/NotificationSearch_TEST';
 import NotificationErrorPost from '../endpoints/NotificationErrorPost_TEST';
-import NotificationDeleteTEST from '../endpoints/NotificationDelete_TEST';
 
 const Notifications = () => {
   return (
     <>
+      <NotificationSearch />
+      <br />
+      <hr />
+      <br />
       <NotificationGetTEST />
       <br />
       <hr />
@@ -21,10 +25,6 @@ const Notifications = () => {
       <hr />
       <br />
       <NotificationErrorPost />
-      <br />
-      <hr />
-      <br />
-      <NotificationDeleteTEST />
     </>
   );
 };

@@ -20,11 +20,6 @@ function api_statistics_get(WP_REST_Request $request) {
     return $error;
   }
 
-  // Verifica rate limiting
-  if ($error = Permissions::check_rate_limit('statistics_get-' . $user_id, 100)) {
-    return $error;
-  }
-
   // Verifica o status da conta do usuário
   if ($error = Permissions::check_account_status($user)) {
     return $error;
@@ -229,6 +224,26 @@ function get_user_statistics($user_id) {
     $user_id
   ));
 
+  // NOVO: Conta posts por categoria
+  $posts_by_category = $wpdb->get_results($wpdb->prepare(
+    "SELECT 
+      t.term_id as category_id,
+      t.name as category_name,
+      t.slug as category_slug,
+      COUNT(*) as post_count
+    FROM {$wpdb->posts} p
+    INNER JOIN {$wpdb->term_relationships} tr ON p.ID = tr.object_id
+    INNER JOIN {$wpdb->term_taxonomy} tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
+    INNER JOIN {$wpdb->terms} t ON tt.term_id = t.term_id
+    WHERE p.post_author = %d 
+    AND p.post_type = 'post'
+    AND p.post_status = 'publish'
+    AND tt.taxonomy = 'category'
+    GROUP BY t.term_id
+    ORDER BY post_count DESC",
+    $user_id
+  ));
+
   // Formata os dados dos posts
   $format_post_data = function($posts) {
     return array_map(function($post) {
@@ -237,9 +252,22 @@ function get_user_statistics($user_id) {
         'title' => $post->post_title,
         'last_interaction' => $post->last_viewed_at ?? $post->last_downloaded_at,
         'count' => (int) ($post->view_count ?? $post->download_count),
-        'url' => get_permalink($post->post_id)
+        'url' => get_permalink($post->post_id),
       ];
     }, $posts);
+  };
+
+  // Formata os dados das categorias
+  $format_category_data = function($categories) {
+    return array_map(function($category) {
+      return [
+        'category_id' => (int) $category->category_id,
+        'name' => $category->category_name,
+        'post_count' => (int) $category->post_count,
+        'url' => get_category_link($category->category_id),
+        'slug' => $category->category_slug
+      ];
+    }, $categories);
   };
 
   // Prepara resposta
@@ -256,7 +284,8 @@ function get_user_statistics($user_id) {
           'favorites_count' => (int) $favorites_count,
           'views_count' => $views_count,
           'downloads_count' => $downloads_count,
-          'total_interactions' => $views_count + $downloads_count
+          'total_interactions' => $views_count + $downloads_count,
+          'categories' => $format_category_data($posts_by_category)
         ],
         'viewed_posts' => $format_post_data($viewed_posts),
         'downloaded_posts' => $format_post_data($downloaded_posts)

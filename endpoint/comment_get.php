@@ -18,11 +18,6 @@ function api_comment_get(WP_REST_Request $request) {
   if ($error = Permissions::check_authentication($user)) {
     return $error;
   }
-
-  // Verifica rate limiting
-  if ($error = Permissions::check_rate_limit('comment_get-' . $user_id, 20)) {
-    return $error;
-  }
   
   // Verifica o status da conta do usuário
   if ($error = Permissions::check_account_status($user)) {
@@ -38,7 +33,7 @@ function api_comment_get(WP_REST_Request $request) {
   // Obtém os comentários com parâmetros otimizados
   $comments = get_comments([
     'post_id'       => $post_id,
-    'order'         => 'ASC',
+    'order'         => 'DESC',
     'status'        => 'approve',
     'fields'        => 'all', // Ou 'ids' para melhor performance se necessário
   ]);
@@ -49,12 +44,14 @@ function api_comment_get(WP_REST_Request $request) {
     // Obtém a foto do usuário
     $photo_id = get_user_meta($comment->user_id, 'photo', true);
     $photo_url = $photo_id ? wp_get_attachment_image_url($photo_id, '') : '';
+    $user_meta = get_userdata($comment->user_id);
     
     return [
       'id'            => $comment->comment_ID,
       'author'        => $comment->comment_author,
       'author_id'     => $comment->user_id,
       'author_photo'  => $photo_url,
+      'author_roles'  => $user_meta->roles,
       'content'       => wp_kses_post($comment->comment_content),
       'date'          => $comment->comment_date,
       'date_gmt'      => $comment->comment_date_gmt,

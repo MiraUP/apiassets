@@ -18,16 +18,12 @@ function api_assets_get(WP_REST_Request $request) {
   if ($error = Permissions::check_authentication($user)) {
     return $error;
   }
-
-  // Verifica rate limiting
-  if ($error = Permissions::check_rate_limit('assets_post-' . $user_id, 20)) {
-    return $error;
-  }
   
   // Verifica o status da conta do usuário
   if ($error = Permissions::check_account_status($user)) {
     return $error;
   }
+
 
   // Sanitiza e valida os parâmetros de consulta
   $_url = sanitize_text_field($request['url']) ?: '';
@@ -43,31 +39,110 @@ function api_assets_get(WP_REST_Request $request) {
   $_origin = sanitize_text_field($request['origin']) ?: '';
   $_favorite = sanitize_text_field($request['favorite']) ?: '';
   $_new = filter_var($request['new'], FILTER_VALIDATE_BOOLEAN);
+  
+
+  if (current_user_can('administrator')) {
+    $_status = 'publish,pending,draft,private'; 
+  } else {
+    $_status = 'publish';
+    
+    add_filter('posts_where', function($where) use ($user_id) {
+      global $wpdb;
+      $where .= $wpdb->prepare(
+        " OR ({$wpdb->posts}.post_author = %d AND {$wpdb->posts}.post_status IN ('pending', 'draft'))",
+        $user_id
+      );
+      return $where;
+    });
+  }
 
   // Busca o Ativo pela URL 
   if(!empty($_url)) {
+    // Remove a URL base e sanitiza
+    $site_url = trailingslashit(get_site_url());
+    $clean_url = str_replace($site_url, '', $_url);
+    $clean_url = strtok($clean_url, '?#'); // Remove query strings e fragments
+    
+    // Primeiro tenta pelo ID se a URL contiver um número
+    if (preg_match('/\d+/', $clean_url, $matches)) {
+        $post_id = (int) $matches[0];
+        $post = get_post($post_id);
+        
+        // Verifica se o post existe e tem status permitido
+        if ($post && in_array($post->post_status, explode(',', $_status))) {
+            // Verifica adicionalmente se o usuário tem permissão para ver posts não publicados
+            if ($post->post_status !== 'publish' && !current_user_can('edit_post', $post->ID)) {
+                return new WP_Error('post_not_found', 'Ativo não encontrado ou não disponível.', ['status' => 404]);
+            }
+            
+            $asset = asset_data($post);
+            return rest_ensure_response([
+                'success' => true,
+                'message' => 'Ativo encontrado por ID.',
+                'data'    => $asset,
+            ]);
+        }
+    }
+    
+    // Se não encontrar por ID, tenta pelo slug
+    $post_slug = sanitize_title(basename($clean_url));
+    if (!empty($post_slug)) {
+      // Primeiro tenta encontrar diretamente pelo slug
+      $post = get_page_by_path($post_slug, OBJECT, 'post');
       
-    // Extrai o slug da URL
-    $post_slug = basename($_url); // Obtém o último segmento da URL (slug)
-    if (empty($post_slug)) {
-      return new WP_Error('invalid_url', 'URL do post inválida.', ['status' => 400]);
-    }
-
-    // Busca o post pelo slug
-    $post = get_page_by_path($_url, OBJECT, 'post');
-    if (!$post) {
-      return new WP_Error('post_not_found', 'Post não encontrado.', ['status' => 404]);
-    }
-
-    // Obtém os dados do ativo
-    $asset = asset_data($post);
-
-    return rest_ensure_response([
-      'success' => true,
-      'message' => 'Busca de Ativo feita com sucesso.',
-      'data' => $asset,
-    ]);
+      // Se não encontrou ou não tem permissão, faz uma query mais completa
+      if (!$post || !in_array($post->post_status, explode(',', $_status)) || 
+        ($post->post_status !== 'publish' && !current_user_can('edit_post', $post->ID))) {
+        
+        // Prepara argumentos para a query
+        $query_args = [
+          'name'           => $post_slug,
+          'post_type'      => 'post',
+          'post_status'    => explode(',', $_status),
+          'posts_per_page' => 1,
+        ];
+          
+        // Se não é admin, adiciona filtro para permitir ver seus próprios posts
+        if (!current_user_can('administrator')) {
+          add_filter('posts_where', function($where) use ($user_id) {
+            global $wpdb;
+            $where .= $wpdb->prepare(
+              " OR ({$wpdb->posts}.post_author = %d AND {$wpdb->posts}.post_status IN ('pending', 'draft'))",
+              $user_id
+            );
+            return $where;
+          });
+        }
+        
+        $query = new WP_Query($query_args);
+          
+          // Remove o filtro após a query
+          if (!current_user_can('administrator')) {
+              remove_filter('posts_where', 'custom_where_filter');
+          }
+          
+          if ($query->have_posts()) {
+              $post = $query->posts[0];
+              $asset = asset_data($post);
+              return rest_ensure_response([
+                  'success' => true,
+                  'message' => 'Ativo encontrado por slug.',
+                  'data'    => $asset,
+              ]);
+          }
+      } else {
+          // Se encontrou diretamente pelo slug e tem permissão
+          $asset = asset_data($post);
+          return rest_ensure_response([
+              'success' => true,
+              'message' => 'Ativo encontrado por slug.',
+              'data'    => $asset,
+          ]);
+      }
   }
+    
+    return new WP_Error('post_not_found', 'Ativo não encontrado.', ['status' => 404]);
+}
 
   // Converte o autor de login para ID, se necessário
   if (!is_numeric($_user)) {
@@ -87,6 +162,7 @@ function api_assets_get(WP_REST_Request $request) {
     'paged'          => $_page,
     'orderby'        => 'date', // Ordenação padrão por data de criação
     'order'          => strtoupper($_date_created) === 'ASC' ? 'ASC' : 'DESC',
+    'post_status'    => explode(',', $_status), // Aceita múltiplos status
   ];
 
   // Se o parâmetro "_new" for true, busca os 8 ativos mais recentes dos últimos 3 meses
@@ -108,7 +184,12 @@ function api_assets_get(WP_REST_Request $request) {
 
   // Filtro por categoria
   if ($_category) {
-    $args['cat'] = $_category;
+    // Substitui o código antigo que usava 'cat' por ID
+    $args['tax_query'][] = [
+        'taxonomy' => 'category',
+        'field'    => 'slug', // Busca pelo nome da categoria
+        'terms'    => $_category,
+    ];
   }
 
   // Filtro por tags (uma ou mais palavras)
@@ -188,18 +269,37 @@ function api_assets_get(WP_REST_Request $request) {
     }
   }
 
+  // Verifica se há posts
+  if (empty($posts)) {
+    return rest_ensure_response([
+      'success' => true,
+      'message' => 'Nenhum ativo encontrado com os critérios de busca fornecidos.',
+      'data' => [],
+      'total_pages' => 0,
+      'current_page' => $_page,
+      'total_items' => 0,
+      'search_params' => [ // Adiciona os parâmetros usados na busca
+        'category' => $_category,
+        'tags' => $_tags,
+        'favorite' => $_favorite,
+        'new' => $_new,
+        'date_order' => $_date_created
+      ]
+    ]);
+  }
+
   return rest_ensure_response([
     'success' => true,
     'message' => 'Busca de Ativos feita com sucesso.',
     'data'    => $assets,
-    'total_pages' => $query->max_num_pages, // Adicionar total de páginas
-    'current_page' => $_page
+    'total_pages' => $query->max_num_pages,
+    'current_page' => $_page,
   ]);
 }
 
 /**
-* Registra as rotas da API para listar ativos ou busca dados de um ativo especifico.
-*/
+ * Registra as rotas da API para listar ativos ou busca dados de um ativo especifico.
+ */
 // Rota para busca lista de ativos com ou sem filtros
 function register_api_assets_get() {
   register_rest_route('api/v1', '/asset', [
@@ -207,7 +307,7 @@ function register_api_assets_get() {
     'callback'            => 'api_assets_get',
     'permission_callback' => function () {
       return is_user_logged_in(); // Apenas usuários autenticados podem acessar
-    },
+    }
   ]);
 }
 add_action('rest_api_init', 'register_api_assets_get');
@@ -240,18 +340,20 @@ function asset_data($post) {
 
   $thumbnail = !empty($post_meta['thumbnail']) ? wp_get_attachment_image_src($post_meta['thumbnail'][0], 'large')[0] : '';
   $previews = [];
-  if (!empty($post_meta['previews']) && is_array($post_meta['previews'])) {
-    foreach ($post_meta['previews'] as $preview => $array) {
-      $data = get_post($array);
-      if ($data) {
-        $previews[$preview] = [
-          "id"           => $data->ID,
-          "title"        => $data->post_title,
-          "url"          => $data->guid,
-          "icon_styles"  => get_the_terms($data->ID, 'icon_style'),
-          "icon_tag"     => get_the_terms($data->ID, 'icon_tag'),
-          "icon_category" => get_the_terms($data->ID, 'icon_category'),
-        ];
+  if (!has_term('icon', 'category', $post->ID)) {
+    if (!empty($post_meta['previews']) && is_array($post_meta['previews'])) {
+      foreach ($post_meta['previews'] as $preview => $array) {
+        $data = get_post($array);
+        if ($data) {
+          $previews[$preview] = [
+            "id"           => $data->ID,
+            "title"        => $data->post_title,
+            "url"          => $data->guid,
+            "icon_styles"  => get_the_terms($data->ID, 'icon_style'),
+            "icon_tag"     => get_the_terms($data->ID, 'icon_tag'),
+            "icon_category" => get_the_terms($data->ID, 'icon_category'),
+          ];
+        }
       }
     }
   }
@@ -289,9 +391,21 @@ function asset_data($post) {
     }
   }
 
+  $slug = $post->post_name;
+  if (empty($slug)) {
+    $slug = sanitize_title($post->post_title);
+  }
+  
+  // Geração do permalink para rascunhos/pendentes
+  $permalink = get_permalink($post);
+  if (!$permalink) {
+    $permalink = home_url('/?p=' . $post->ID);
+  }
+
   return [
     'id'             => $post->ID,
-    'slug'           => strstr(str_replace(get_bloginfo('url').'/', '', get_permalink($post->ID)), '/', true),
+    'slug'           => $slug,
+    'permalink'      => $permalink,
     'status'         => $post->post_status,
     'author'         => $user->user_login,
     'title'          => $post->post_title,
@@ -315,4 +429,5 @@ function asset_data($post) {
     'total_comments' => $total_comments,
   ];
 }
+
 ?>

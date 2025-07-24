@@ -18,11 +18,6 @@ function api_asset_put(WP_REST_Request $request) {
   if ($error = Permissions::check_authentication($user)) {
     return $error;
   }
-
-  // Verifica rate limiting
-  if ($error = Permissions::check_rate_limit('assets_put-' . $user_id, 2)) {
-    return $error;
-  }
   
   // Verifica o status da conta do usuário
   if ($error = Permissions::check_account_status($user)) {

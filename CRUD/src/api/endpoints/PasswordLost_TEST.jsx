@@ -22,6 +22,7 @@ const PasswordLostTEST = () => {
           body: JSON.stringify({ login }),
         },
       );
+      console.log(response);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -30,7 +31,7 @@ const PasswordLostTEST = () => {
 
       setMessage('Email de recuperação enviado com sucesso.');
       setIsError(false);
-      navigate('/password-reset'); // Redireciona para a tela de reset de senha
+      //navigate('/password-reset'); // Redireciona para a tela de reset de senha
     } catch (error) {
       setMessage(error.message || 'Erro ao enviar solicitação.');
       setIsError(true);

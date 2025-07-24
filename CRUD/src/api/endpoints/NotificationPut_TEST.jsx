@@ -36,18 +36,18 @@ const NotificationPutTEST = () => {
         return response.json();
       })
       .then((json) => {
-        if (json.success && Array.isArray(json.data)) {
-          setListNotifications(json.data);
+        if (json.success && Array.isArray(json.data.notifications)) {
+          setListNotifications(json.data.notifications);
         }
-        if (!Array.isArray(json.data)) {
-          setTitle(json.data.title);
-          setReader(json.data.read);
-          setContent(json.data.content);
-          setCategory(json.data.category);
-          setMessage(json.data.message);
-          setPostID(json.data.post_id);
-          setUrlPost(json.data.url_post);
-          setMarker(json.data.marker);
+        if (!Array.isArray(json.data.notifications)) {
+          setTitle(json.data.notifications.title);
+          setReader(json.data.notifications.read);
+          setContent(json.data.notifications.content);
+          setCategory(json.data.notifications.category);
+          setMessage(json.data.notifications.message);
+          setPostID(json.data.notifications.post_id);
+          setUrlPost(json.data.notifications.url_post);
+          setMarker(json.data.notifications.marker);
           setSender(json.recipients.senders.map((item) => item.user_id));
         }
 

@@ -19,7 +19,7 @@ class Permissions {
     if (is_rate_limit_exceeded($action, $amount)) {
       return new WP_Error(
         'rate_limit_exceeded', 
-        'Limite de requisições excedido.', 
+        'Limite de requisições excedida.', 
         ['status' => 429]
       );
     }

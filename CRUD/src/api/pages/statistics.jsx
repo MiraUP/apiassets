@@ -1,10 +1,14 @@
 import React from 'react';
-import StatisticsDashboard from '../endpoints/StatisticsGet_TEST';
+import StatisticsGetTEST from '../endpoints/StatisticsGet_TEST';
+import TaxonomysPostTEST from '../endpoints/TaxonomyPost_TEST';
+import TaxonomysPutTEST from '../endpoints/TaxonomyPut_TEST';
+import TaxonomysDeleteTEST from '../endpoints/TaxonomyDelete_TEST';
+import TaxonomySearchTEST from '../endpoints/TaxonomySearch_TEST';
 
-const Statistics = () => {
+const APIPageTaxonomy = () => {
   return (
     <>
-      <StatisticsDashboard />
+      <StatisticsGetTEST />
       <br />
       <hr />
       <br />
@@ -12,4 +16,4 @@ const Statistics = () => {
   );
 };
 
-export default Statistics;
+export default APIPageTaxonomy;

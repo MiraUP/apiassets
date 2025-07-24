@@ -10,6 +10,7 @@ import APIPageMedia from './api/pages/media';
 import APIPageNotifications from './api/pages/notifications';
 import APIPageComments from './api/pages/comments';
 import APIPageStatistics from './api/pages/statistics';
+import APIPageCuration from './api/pages/curation';
 
 function App() {
   return (
@@ -47,7 +48,10 @@ function App() {
                   Notifications
                 </Link>
                 <Link className="nav-link" to="/statistics">
-                  Estátisticas
+                  Statistics
+                </Link>
+                <Link className="nav-link" to="/curation">
+                  Curation
                 </Link>
               </Nav>
             </Navbar.Collapse>
@@ -65,6 +69,7 @@ function App() {
             <Route path="/media/*" element={<APIPageMedia />} />
             <Route path="/notification/*" element={<APIPageNotifications />} />
             <Route path="/statistics/*" element={<APIPageStatistics />} />
+            <Route path="/curation/*" element={<APIPageCuration />} />
           </Routes>
         </Container>
       </BrowserRouter>

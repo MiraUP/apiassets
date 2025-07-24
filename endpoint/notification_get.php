@@ -19,11 +19,6 @@ function api_notifications_get(WP_REST_Request $request) {
     return $error;
   }
 
-  // Verifica rate limiting
-  if ($error = Permissions::check_rate_limit('notification_get-' . $user_id, 20)) {
-    return $error;
-  }
-
   // Verifica o status da conta do usuário
   if ($error = Permissions::check_account_status($user)) {
     return $error;
@@ -96,38 +91,104 @@ function api_notifications_get(WP_REST_Request $request) {
       ],
     ]);
   }
+  
+  // Busca os totais - QUERY CORRIGIDA
+  $totals = [
+    'total' => 0,
+    'unread' => 0,
+    'read' => 0,
+    'markers' => []
+  ];
 
-  // Caso contrário, busca todas as notificações com paginação
-  $params = $request->get_params();
-  $per_page = isset($params['per_page']) ? absint($params['per_page']) : 10;
-  $order = isset($params['order']) && in_array(strtoupper($params['order']), ['ASC', 'DESC']) 
-          ? strtoupper(sanitize_text_field($params['order'])) 
-          : 'DESC';
-  $page = isset($params['page']) ? absint($params['page']) : 1;
-  $read_status = isset($params['read']) ? filter_var($params['read'], FILTER_VALIDATE_BOOLEAN) : null;
-  $offset = ($page - 1) * $per_page;
+  // Query para totais gerais (usando backticks para a coluna reader)
+  $totals_query = $wpdb->prepare(
+    "SELECT 
+      COUNT(*) as total,
+      SUM(CASE WHEN `reader` = 0 THEN 1 ELSE 0 END) as unread,
+      SUM(CASE WHEN `reader` = 1 THEN 1 ELSE 0 END) as `read_status`
+    FROM {$table_name} n
+    INNER JOIN {$wpdb->posts} p ON n.notification_id = p.ID
+    WHERE n.user_id = %d AND p.post_type = 'notification'",
+    $user->ID
+  );
 
-  // Base da query
-  $query = "SELECT n.*, p.post_title, p.post_content, p.post_date, p.guid 
-            FROM {$table_name} n
-            INNER JOIN {$wpdb->posts} p ON n.notification_id = p.ID
-            WHERE n.user_id = %d AND p.post_type = 'notification'";
-
-  // Adiciona filtro por status de leitura se fornecido
-  if ($read_status !== null) {
-    $query .= " AND n.reader = %d";
-    $query_args = [$user->ID, (int)$read_status];
-  } else {
-    $query_args = [$user->ID];
+  $totals_result = $wpdb->get_row($totals_query);
+  
+  if ($totals_result) {
+    $totals['total'] = (int) $totals_result->total;
+    $totals['unread'] = (int) $totals_result->unread;
+    $totals['read'] = (int) $totals_result->read_status; // Note a mudança para read_status
   }
 
-  // Completa a query com ordenação e paginação
-  $query .= " ORDER BY p.post_date " . $order . " LIMIT %d OFFSET %d";
-  array_push($query_args, $per_page, $offset);
+  // Query para totais por marcador - QUERY CORRIGIDA
+  $markers_query = $wpdb->prepare(
+    "SELECT 
+      marker,
+      COUNT(*) as total,
+      SUM(CASE WHEN `reader` = 0 THEN 1 ELSE 0 END) as unread,
+      SUM(CASE WHEN `reader` = 1 THEN 1 ELSE 0 END) as `read_status`
+    FROM {$table_name} n
+    INNER JOIN {$wpdb->posts} p ON n.notification_id = p.ID
+    WHERE n.user_id = %d AND p.post_type = 'notification'
+    GROUP BY marker",
+    $user->ID
+  );
 
-  // Prepara e executa a query
-  $query = $wpdb->prepare($query, $query_args);
-  $notifications = $wpdb->get_results($query);
+  $markers_results = $wpdb->get_results($markers_query);
+  
+  foreach ($markers_results as $marker) {
+    $totals['markers'][$marker->marker] = [
+      'total' => (int) $marker->total,
+      'unread' => (int) $marker->unread,
+      'read' => (int) $marker->read_status // Note a mudança para read_status
+    ];
+  }
+  
+  // Caso contrário, busca todas as notificações com paginação
+$params = $request->get_params();
+$per_page = isset($params['per_page']) ? absint($params['per_page']) : 10;
+$order = isset($params['order']) && in_array(strtoupper($params['order']), ['ASC', 'DESC']) 
+        ? strtoupper(sanitize_text_field($params['order'])) 
+        : 'DESC';
+$page = isset($params['page']) ? absint($params['page']) : 1;
+$marker = isset($params['marker']) ? sanitize_text_field($params['marker']) : null;
+
+// Tratamento correto do parâmetro read
+$read_status = isset($params['read']) ? $params['read'] : null;
+if ($read_status !== null) {
+    $read_status = in_array(strtolower($read_status), ['1', 'true', 'yes']) ? 1 : 0;
+}
+
+$offset = ($page - 1) * $per_page;
+
+// Base da query
+$query = "SELECT n.*, p.post_title, p.post_content, p.post_date, p.guid 
+          FROM {$table_name} n
+          INNER JOIN {$wpdb->posts} p ON n.notification_id = p.ID
+          WHERE n.user_id = %d AND p.post_type = 'notification'";
+
+$query_args = [$user->ID];
+
+// Adiciona filtro por status de leitura se fornecido
+if ($read_status !== null) {
+    $query .= " AND n.reader = %d";
+    $query_args[] = $read_status;
+}
+
+// Adiciona filtro por marcador se fornecido
+if ($marker !== null) {
+    $query .= " AND n.marker = %s";
+    $query_args[] = $marker;
+}
+
+// Completa a query com ordenação e paginação
+$query .= " ORDER BY p.post_date " . $order . " LIMIT %d OFFSET %d";
+$query_args[] = $per_page;
+$query_args[] = $offset;
+
+// Prepara e executa a query
+$query = $wpdb->prepare($query, $query_args);
+$notifications = $wpdb->get_results($query);
 
   if (empty($notifications)) {
     return rest_ensure_response([
@@ -140,11 +201,22 @@ function api_notifications_get(WP_REST_Request $request) {
   // Formata os dados de resposta
   $formatted_notifications = array_map('format_notification_data', $notifications);
 
-  return rest_ensure_response([
+  // Formata a resposta final
+  $response = [
     'success' => true,
     'message' => 'Notificações listadas com sucesso.',
-    'data' => $formatted_notifications,
-  ]);
+    'data' => [
+      'notifications' => $formatted_notifications ?? [],
+      'totals' => $totals,
+      'pagination' => [
+        'current_page' => $page,
+        'per_page' => $per_page,
+        'total_items' => $totals['total']
+      ]
+    ]
+  ];
+
+  return rest_ensure_response($response);
 }
 
 /**
@@ -176,7 +248,7 @@ function format_notification_data($notification) {
     'content' => wp_kses_post($notification->post_content),
     'category' => !is_wp_error($terms) ? $terms : [],
     'url_post' => esc_url($post->guid),
-    'url_notification' => esc_url($notification->guid),
+    'url_notification' => esc_url(get_permalink($notification->notification_id)),
     'message' => isset($post_meta['notification_message'][0]) ? 
                 sanitize_text_field($post_meta['notification_message'][0]) : 
                 'Mensagem não disponível',

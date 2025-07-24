@@ -11,7 +11,7 @@ const APIPageComments = () => {
   const [newComment, setNewComment] = React.useState('');
 
   React.useEffect(() => {
-    fetch(`http://miraup.test/json/api/asset/${assetSlug}/`, {
+    fetch(`http://miraup.test/json/api/v1/asset/${assetSlug}/?total=1000`, {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -44,6 +44,7 @@ const APIPageComments = () => {
       )}
       <Row>
         {assetSlug === '' &&
+          assetsData.length > 0 &&
           assetsData.map((asset) => (
             <Col key={asset.id}>
               <Card onClick={() => setAssetSlug(asset.slug)}>

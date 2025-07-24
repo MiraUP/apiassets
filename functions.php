@@ -14,6 +14,7 @@
   $dirbase = get_template_directory();
 
   require_once $dirbase . '/endpoint/notification_get.php';
+  require_once $dirbase . '/endpoint/notification_search.php';
   require_once $dirbase . '/endpoint/notification_post.php';
   require_once $dirbase . '/endpoint/notification_add.php';
   require_once $dirbase . '/endpoint/notification_put.php';
@@ -33,6 +34,7 @@
   require_once $dirbase . '/endpoint/asset_put.php';
   require_once $dirbase . '/endpoint/asset_delete.php';
   require_once $dirbase . '/endpoint/new_code_email.php';
+  require_once $dirbase . '/endpoint/preview_get.php';
 
   require_once $dirbase . '/endpoint/media_search.php';
   require_once $dirbase . '/endpoint/media_post.php';
@@ -55,7 +57,12 @@
   require_once $dirbase . '/endpoint/statistics_post.php';
 
   require_once $dirbase . '/endpoint/password.php';
+  
+  require_once $dirbase . '/endpoint/curation_post.php';
+  require_once $dirbase . '/endpoint/curation_get.php';
 
+  require_once $dirbase . '/endpoint/system_get.php';
+  
   /****** Translation Dictionary ******/
   include('functions/translate_dictionary.php');
 
@@ -91,4 +98,7 @@
 
   /****** Extract Valid Words Tags ******/
   include('functions/extract_words_tags.php');
+
+  /****** Password Reset Expiration ******/
+  include('functions/password_reset_expiration.php');
 ?>

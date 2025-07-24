@@ -234,14 +234,17 @@ const AssetsSearchTEST = () => {
                   }
                 >
                   <option value="">Todas</option>
-                  {taxonomyList.length > 0 &&
+                  {taxonomyList.length > 0 ? (
                     taxonomyList
                       .filter(({ taxonomy }) => taxonomy === 'developer')
                       .map(({ term_id, name }) => (
                         <option key={term_id} value={name}>
                           {name}
                         </option>
-                      ))}
+                      ))
+                  ) : (
+                    <option>Nada cadastrado por aqui</option>
+                  )}
                 </Form.Select>
               </Form.Group>
             </Col>

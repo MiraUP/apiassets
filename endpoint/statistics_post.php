@@ -49,11 +49,6 @@ function api_statistics_post(WP_REST_Request $request) {
     return $error;
   }
 
-  // Verifica rate limiting
-  if ($error = Permissions::check_rate_limit('statistics_get-' . $user_id, 100)) {
-    return $error;
-  }
-
   // Verifica o status da conta do usuário
   if ($error = Permissions::check_account_status($user)) {
     return $error;

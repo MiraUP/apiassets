@@ -75,6 +75,8 @@ const MediaPutTEST = () => {
   const handleSubmit = (event) => {
     event.preventDefault();
 
+    console.log(deleteTag);
+
     if (!asset) {
       console.error('Nenhum asset selecionado.');
       return;
@@ -103,7 +105,7 @@ const MediaPutTEST = () => {
         }
         return response.json();
       })
-      .then((json) => console.log('Resposta da API:', json.data))
+      .then((json) => console.log('Resposta da API:', json))
       .catch((error) => console.error('Erro:', error));
   };
 

@@ -61,6 +61,7 @@ const TaxonomysPostTEST = () => {
               <option value="icon_category">Icon Category</option>
               <option value="icon_style">Icon Style</option>
               <option value="icon_tag">Icon Tag</option>
+              <option value="notification">Notification</option>
             </Form.Select>
           </Col>
           <Col xs={4}>

@@ -19,11 +19,6 @@ function api_user_get($request) {
       return $error;
   }
 
-  // Verifica rate limiting
-  if ($error = Permissions::check_rate_limit('user_get-' . $user_id, 10)) {
-    return $error;
-  }
-
   // Obtém a foto do usuário
   $photo_id = get_user_meta($user_id, 'photo', true);
   $photo_url = $photo_id ? wp_get_attachment_image_url($photo_id, '') : '';
@@ -104,11 +99,6 @@ function api_users_get($request) {
 
   // Verifica se o usuário está logado
   if ($error = Permissions::check_authentication($user)) {
-    return $error;
-  }
-
-  // Verifica rate limiting
-  if ($error = Permissions::check_rate_limit('user_get-' . $user_id, 100)) {
     return $error;
   }
 

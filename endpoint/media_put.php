@@ -44,14 +44,14 @@ function api_media_put(WP_REST_Request $request) {
   }
     
   // Verifica se houve uma ação de exclusão de relação de tag com a mídia
-  if (!empty($delete_tag)) {
-    $result = delete_tag($icon_id, $delete_tag);
-    return rest_ensure_response([
-      'success' => true,
-      'message' => 'Tag removed successfully.', 'digital-assets',
-      'data'=>$result
-    ]);
-  }
+  // if (!empty($delete_tag)) {
+  //   $result = delete_tag($icon_id, $delete_tag);
+  //   return rest_ensure_response([
+  //     'success' => true,
+  //     'message' => 'Tag removida com sucesso.', 'digital-assets',
+  //     'data'=>$result
+  //   ]);
+  // }
     
   // Extrai o slug da URL
   $post_slug = basename($url); // Obtém o último segmento da URL (slug)
@@ -249,7 +249,7 @@ function delete_tag($attachment_id, $term_id) {
  */
 function register_api_media_put() {
   register_rest_route('api/v1', '/media', [
-    'methods'             => WP_REST_Server::READABLE,
+    'methods'             => WP_REST_Server::EDITABLE,
     'callback'            => 'api_media_put',
     'permission_callback' => function() {
       return is_user_logged_in(); // Apenas usuários autenticados podem acessar

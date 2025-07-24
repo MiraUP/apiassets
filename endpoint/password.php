@@ -42,8 +42,8 @@ function api_password_lost(WP_REST_Request $request) {
 
   // Monta o link de reset de senha
   $subject = 'Recuperação de Senha';
-  $message = "Foi solicitado um pedido de recuperação de senha. Esse é o seu link para resetar a sua senha: \r\n\r\n";
-  $message .= '<a href="' . esc_url_raw(get_bloginfo('url') . "/reset-password?key=$key&login=" . rawurlencode($user_login)) . '">' . esc_url_raw(get_bloginfo('url') . "/reset-password?key=$key&login=" . rawurlencode($user_login)) . '</a>';
+  $message = "Foi solicitado um pedido de recuperação de senha. O link abaixo expirará em <b>1 hora</b>, use-o para resetar a senha: \r\n\r\n";
+  $message .= '<a href="' . esc_url_raw(get_bloginfo('url') . "/resetar-senha?key=$key&login=" . rawurlencode($user_login)) . '">' . esc_url_raw(get_bloginfo('url') . "/resetar-senha?key=$key&login=" . rawurlencode($user_login)) . '</a>';
   $message .= "\r\n\r\nSe você não iniciou esse processo, entre em contato com o administrador do site.";
 
   // Envia o email com o link de reset
@@ -88,10 +88,15 @@ function api_password_reset(WP_REST_Request $request) {
   // Sanitiza e valida os dados de entrada
   $login = sanitize_text_field($request['login']);
   $password = sanitize_text_field($request['password']);
+  $password_repeat = sanitize_text_field($request['password_repeat']);
   $key = sanitize_text_field($request['key']);
 
-  if (empty($login) || empty($password) || empty($key)) {
+  if (empty($login) || empty($password) || empty($password_repeat) || empty($key)) {
     return new WP_Error('missing_data', 'Informe o login, a senha e a chave de recuperação.', ['status' => 400]);
+  }
+  
+  if ($password !== $password_repeat) {
+    return new WP_Error('password_mismatch', 'As senhas não coincidem.', ['status' => 400]);
   }
 
   // Busca o usuário pelo login
@@ -120,7 +125,7 @@ function api_password_reset(WP_REST_Request $request) {
 * Registra a rota da API para reset de senha.
 */
 function register_api_password_reset() {
-  register_rest_route('api', '/password/reset', [
+  register_rest_route('api/v1', '/password/reset', [
     'methods'             => WP_REST_Server::CREATABLE,
     'callback'            => 'api_password_reset',
     'permission_callback' => '__return_true', // Qualquer um pode acessar

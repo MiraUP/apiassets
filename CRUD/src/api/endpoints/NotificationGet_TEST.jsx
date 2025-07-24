@@ -18,9 +18,8 @@ const NotificationGetTEST = () => {
         return response.json();
       })
       .then((json) => {
-        console.log(json.data);
-        if (json.success && Array.isArray(json.data)) {
-          setNotifications(json.data);
+        if (json.success && Array.isArray(json.data.notifications)) {
+          setNotifications(json.data.notifications);
           // Inicializa o estado de leitura
           const newRead = {};
           json.data.forEach((notification) => {
@@ -32,8 +31,6 @@ const NotificationGetTEST = () => {
         return json;
       });
   }, []);
-
-  console.log(notifications);
 
   const handleRead = (id, currentRead) => {
     const newRead = !currentRead; // Inverte o estado de leitura
@@ -84,7 +81,7 @@ const NotificationGetTEST = () => {
       });
   };
 
-  //console.log(notifications);
+  console.log(notifications);
 
   return (
     <>
