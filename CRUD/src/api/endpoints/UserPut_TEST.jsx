@@ -36,7 +36,7 @@ const UserUpdateForm = () => {
       return;
     }
 
-    fetch('http://miraup.test/json/api/v1/user', {
+    fetch('https://api.miraup.com.br/json/api/v1/user', {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + token,
@@ -78,7 +78,7 @@ const UserUpdateForm = () => {
       return;
     }
 
-    fetch('http://miraup.test/json/api/v1/user', {
+    fetch('https://api.miraup.com.br/json/api/v1/user', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -125,7 +125,7 @@ const UserUpdateForm = () => {
     const formData = new FormData(); //Necessário para fazer o Fecth com imagem.
     formData.append('photo', photo);
     if (photo) {
-      fetch('http://miraup.test/json/api/v1/user/photo', {
+      fetch('https://api.miraup.com.br/json/api/v1/user/photo', {
         method: 'POST',
         headers: {
           Authorization: 'Bearer ' + token,
@@ -166,7 +166,7 @@ const UserUpdateForm = () => {
 
   function handleNewCode() {
     const token = localStorage.getItem('token');
-    fetch('http://miraup.test/json/api/v1/user/new-code', {
+    fetch('https://api.miraup.com.br/json/api/v1/user/new-code', {
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + token,

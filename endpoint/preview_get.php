@@ -30,9 +30,22 @@ function register_api_previews_get() {
         'default' => '',
         'sanitize_callback' => 'sanitize_text_field'
       ],
-      'search' => [ // Novo parâmetro para busca
+      'search' => [
         'default' => '',
         'sanitize_callback' => 'sanitize_text_field'
+      ],
+      // Novos parâmetros de ordenação
+      'orderby' => [
+        'default' => 'title',
+        'validate_callback' => function($param) {
+          return in_array($param, ['title', 'date', 'name', 'ID', 'modified']);
+        }
+      ],
+      'order' => [
+        'default' => 'ASC',
+        'validate_callback' => function($param) {
+          return in_array(strtoupper($param), ['ASC', 'DESC']);
+        }
       ]
     ]
   ]);
@@ -40,10 +53,16 @@ function register_api_previews_get() {
 add_action('rest_api_init', 'register_api_previews_get');
 
 function api_previews_get(WP_REST_Request $request) {
+  // Obtém o usuário atual
+  $user = wp_get_current_user();
+  $user_id = (int) $user->ID;
+
   $post_id = (int)$request['id'];
   $page = (int)$request['page'] ?: 1;
   $per_page = (int)$request['per_page'] ?: 60;
   $search_term = sanitize_text_field($request['search']);
+  $orderby = sanitize_text_field($request['orderby']) ?: 'title';
+  $order = strtoupper(sanitize_text_field($request['order'])) ?: 'ASC';
 
   // Verificar autenticação
   if ($error = Permissions::check_authentication($user)) {
@@ -84,7 +103,8 @@ function api_previews_get(WP_REST_Request $request) {
       'post_type' => 'attachment',
       'post__in' => $all_previews,
       'posts_per_page' => -1,
-      'orderby' => 'post__in',
+      'orderby' => $orderby,
+      'order' => $order,
       'fields' => 'ids'
     ]);
   }
@@ -136,7 +156,8 @@ function api_previews_get(WP_REST_Request $request) {
       'post_type' => 'attachment',
       'post__in' => $all_attachments,
       'posts_per_page' => -1,
-      'orderby' => 'post__in'
+      'orderby' => $orderby,
+      'order' => $order
     ];
       
     // Aplica filtros via tax_query se necessário

@@ -337,7 +337,7 @@ function asset_data($post) {
   $user_data = wp_get_current_user();
   $user_id = (int) $user_data->ID;
   $total_comments = get_comments_number($post->ID);
-
+  $thumbnail_id = !empty($post_meta['thumbnail']) ? (int) $post_meta['thumbnail'][0] : '';
   $thumbnail = !empty($post_meta['thumbnail']) ? wp_get_attachment_image_src($post_meta['thumbnail'][0], 'large')[0] : '';
   $previews = [];
   if (!has_term('icon', 'category', $post->ID)) {
@@ -410,6 +410,7 @@ function asset_data($post) {
     'author'         => $user->user_login,
     'title'          => $post->post_title,
     'date_create'    => $post->post_date,
+    'thumbnail_id'   => $thumbnail_id,
     'thumbnail'      => $thumbnail,
     'post_content'   => $post->post_content,
     'subtitle'       => !empty($post_meta['subtitle']) ? $post_meta['subtitle'][0] : '',

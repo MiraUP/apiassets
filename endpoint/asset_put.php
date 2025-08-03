@@ -43,11 +43,30 @@ function api_asset_put(WP_REST_Request $request) {
   $font = sanitize_text_field($request['font']);
   $size_file = sanitize_text_field($request['size_file']);
   $download = esc_url_raw($request['download']);
-  $compatibility = $request['compatibility'];
-  $post_tag = $request['post_tag'];
-  $emphasis_array = json_decode($request['emphasis']);
+  $compatibility = [];
+  if (isset($request['compatibility'])) {
+    if (is_array($request['compatibility'])) {
+      $compatibility = array_map('sanitize_text_field', $request['compatibility']);
+    } elseif (is_string($request['compatibility'])) {
+      $compatibility = [sanitize_text_field($request['compatibility'])];
+    }
+  }
+  $post_tag = [];
+  if (isset($request['post_tag'])) {
+    if (is_array($request['post_tag'])) {
+      $post_tag = array_map('sanitize_text_field', $request['post_tag']);
+    } elseif (is_string($request['post_tag'])) {
+      $post_tag = [sanitize_text_field($request['post_tag'])];
+    }
+  }
+  $emphasis_array = [];
+  if (isset($request['emphasis']) && is_string($request['emphasis'])) {
+    $emphasis_decoded = json_decode($request['emphasis'], true);
+    $emphasis_array = is_array($emphasis_decoded) ? $emphasis_decoded : [];
+  }
   $deleteEmphasis = sanitize_text_field($request['delete_emphasis']);
-  $files = $request->get_file_params();
+  $files = $request->get_file_params() ?: [];
+
     
   // Verifica se o usuário é o autor do post ou um administrador
   if ($error = Permissions::check_post_edit_permission($user, $post_id)) {
@@ -70,6 +89,7 @@ function api_asset_put(WP_REST_Request $request) {
 
   // Verifica se os campos obrigatórios foram fornecidos
   $required_fields = [
+    'post_id' => $post_id,
     'title' => $title,
     'subtitle' => $subtitle,
     'content' => $content,
@@ -109,7 +129,14 @@ function api_asset_put(WP_REST_Request $request) {
   }
 
   // Atualiza taxonomias
-  $updatedCategory = wp_set_post_terms($post_id, $category, 'category');
+  if (!is_numeric($category)) {
+    $term = get_term_by('slug', $category, 'category');
+    if ($term) {
+      $category = $term->term_id;
+    }
+  }
+
+  $updatedCategory = wp_set_post_terms($post_id, [$category], 'category'); // Note o array
   if (is_wp_error($updatedCategory)) {
     return new WP_Error('updated_category_failed', 'Erro ao atualizar a categoria do Ativo.', ['status' => 500]);
   }
@@ -161,56 +188,59 @@ function api_asset_put(WP_REST_Request $request) {
   }
 
   // Processa os arquivos de upload
-  if ($files != []) {
-    require_once ABSPATH . 'wp-admin/includes/image.php';
-    require_once ABSPATH . 'wp-admin/includes/file.php';
-    require_once ABSPATH . 'wp-admin/includes/media.php';
-
-    // Verifica as extensões das imagens
-    $allowed_types = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
-    if (!in_array($file_extension_thumbnail, $allowed_types)) {
+if (!empty($files)) {
+  require_once ABSPATH . 'wp-admin/includes/image.php';
+  require_once ABSPATH . 'wp-admin/includes/file.php';
+  require_once ABSPATH . 'wp-admin/includes/media.php';
+  
+  // Verifica as extensões das imagens
+  $allowed_types = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
+  
+  if (!empty($files['thumbnail'])) {
+    $file_info = wp_check_filetype($files['thumbnail']['name']);
+    $file_extension = strtolower($file_info['ext'] ?? '');
+    
+    if (!in_array($file_extension, $allowed_types)) {
       return new WP_Error(
         'invalid_file_type',
         'Apenas arquivos SVG, PNG, JPG, JPEG, WEBP e GIF são permitidos para a imagem de capa.',
-        ['status' => 401]
+        ['status' => 400]
       );
     }
 
-    if (!empty($files['thumbnail'])) {
-      $old_thumbnail_id = get_post_meta($post_id, 'thumbnail', true); // Busca o ID da thumbnail antiga
-      
-      // Deleta a thumbnail antiga, se existir
-      if ($old_thumbnail_id) {
-        wp_delete_attachment($old_thumbnail_id, true); // true = deleta o arquivo do servidor
-      }
-      
-      $attachment_data = [
-        'post_parent' => $post_id, // Associa o attachment ao post
-      ];
-
-      $new_thumbnail_id = media_handle_upload('thumbnail', $post_id); // Faz o upload da nova thumbnail
-      wp_update_attachment_metadata($new_thumbnail_id, $attachment_data);
-      
-      if (is_wp_error($new_thumbnail_id)) {
-        $response = new WP_Error('thumbnail_update_failed', 'Erro ao fazer upload da thumbnail.', ['status' => 500]);
-        return rest_ensure_response($response);
-      }
-      // Atualiza o custom field com o ID da nova thumbnail
-      update_post_meta($post_id, 'thumbnail', $new_thumbnail_id);
+    // Processamento do upload
+    $old_thumbnail_id = get_post_meta($post_id, 'thumbnail', true);
+    if ($old_thumbnail_id) {
+      wp_delete_attachment($old_thumbnail_id, true);
     }
+
+    $new_thumbnail_id = media_handle_upload('thumbnail', $post_id);
+    if (is_wp_error($new_thumbnail_id)) {
+      return new WP_Error(
+        'upload_failed',
+        'Erro ao fazer upload da thumbnail: ' . $new_thumbnail_id->get_error_message(),
+        ['status' => 500]
+      );
+    }
+
+    update_post_meta($post_id, 'thumbnail', $new_thumbnail_id);
+  }
+  
+  // Envia os arquivos de imagem de preview
+  foreach ($files as $file => $array) {
+    if ($file === 'thumbnail') continue; // Já processamos a thumbnail
     
-    // Envia os arquivos de imagem de preview
-    foreach ($files as $file => $array) {
-      $asset_id = media_handle_upload( $file, $post_id );
-      wp_update_attachment_metadata($asset_id, $attachment_data);
-      if(is_numeric($asset_id)) {
-        add_post_meta($post_id, 'previews', $asset_id);
-      } else {
-        $response = new WP_Error('previews_update_failed', 'Erro ao fazer upload dos previews.', ['status' => 500]);
-        return rest_ensure_response($response);
-      }
+    $asset_id = media_handle_upload($file, $post_id);
+    wp_update_attachment_metadata($asset_id, $attachment_data);
+    if (is_numeric($asset_id)) {
+      add_post_meta($post_id, 'previews', $asset_id);
+    } else {
+      $response = new WP_Error('previews_update_failed', 'Erro ao fazer upload dos previews.', ['status' => 500]);
+      return rest_ensure_response($response);
     }
   }
+}
+  
   // Processa os emphasis
   if (is_array($emphasis_array)) {
     global $wpdb;
@@ -269,10 +299,10 @@ function api_asset_put(WP_REST_Request $request) {
     'message' => 'Ativo atualizado com sucesso.',
     'data' => [
       'post_id' => $post_id,
-      'emphasis' => $emphasis_array,
-      'tag' => $post_tag,
-      'compatibility' => $compatibility,
-      'files' => $files,
+      //'emphasis' => $emphasis_array,
+      //'tag' => $post_tag,
+      //'compatibility' => $compatibility,
+      //'files' => $files,
     ],
   ]);
 }

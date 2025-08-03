@@ -53,8 +53,20 @@ function api_media_post(WP_REST_Request $request) {
 
   // Verifica se as imagens foram enviadas
   $files = $request->get_file_params();
-  if (empty($files['preview'])) {
-    return new WP_Error('no_media', 'Nenhuma mídia foi enviada.', ['status' => 400]);
+  if (empty($files['preview']) || !is_array($files['preview'])) {
+    return new WP_Error('no_media', 'Nenhuma mídia válida foi enviada.', ['status' => 400]);
+  }
+
+  // Verifique se é um upload único (não array) e converta para array
+  if (!isset($files['preview']['tmp_name']) || !is_array($files['preview']['tmp_name'])) {
+    $single_file = $files['preview'];
+    $files['preview'] = [
+      'name' => [$single_file['name']],
+      'type' => [$single_file['type']],
+      'tmp_name' => [$single_file['tmp_name']],
+      'error' => [$single_file['error']],
+      'size' => [$single_file['size']]
+    ];
   }
   
   // Verifica o número de imagens enviadas
@@ -73,8 +85,8 @@ function api_media_post(WP_REST_Request $request) {
     return new WP_Error('not_found_icon_categories', 'Nenhuma categoria foi enviada.', ['status' => 400]);
   }
   
-  // Prepara o array de nomes dos attachments
-  $attachment_names = [];
+  // Prepara o array de dados dos attachments
+  $attachment_data = [];
 
   // Obtém as mídias já vinculadas ao post
   $existing_previews = get_post_meta($post_id, 'previews', false);
@@ -99,6 +111,12 @@ function api_media_post(WP_REST_Request $request) {
     // Verifica se o nome da imagem já existe no post
     if (in_array($sanitized_file_name, $existing_titles)) {
       $duplicate_images[] = $file_name; // Adiciona o nome da imagem duplicada ao array
+      
+      return new WP_Error(
+        'duplicate_images',
+        'Alguns arquivos já foram cadastrados anteriormente.',
+        ['status' => 400]
+      );
       continue; // Ignora a imagem duplicada
     }
 
@@ -239,8 +257,13 @@ function api_media_post(WP_REST_Request $request) {
         }
       }
         
-      // Adiciona o ID do attachment ao array
-      $attachment_names[] = $file_name;
+        // Adiciona os dados do attachment ao array
+        $attachment_data[] = [
+          'id' => $attachment_id,
+          'name' => $file_name,
+          'url' => wp_get_attachment_url($attachment_id),
+          'type' => $file_type,
+        ];
     } else {
       return new WP_Error('error_attachment_create', 'Erro ao criar attachment: ' . $attachment_id->get_error_message(), ['status' => 500]);
     }
@@ -253,7 +276,7 @@ function api_media_post(WP_REST_Request $request) {
   return rest_ensure_response([
     'success' => true,
     'message' => 'Mídias enviadas e registradas com sucesso.',
-    'data'    => $attachment_names,
+    'data'    => count($attachment_data) === 1 ? $attachment_data[0] : $attachment_data,
     'duplicate_files' => $duplicate_images,
   ]);
 }

@@ -31,22 +31,9 @@ function api_media_delete(WP_REST_Request $request) {
 
   // Valida e sanitiza os parâmetros
   $params = $request->get_params();
-  $url = sanitize_text_field($request['post_slug']) ?: '';
+  $asset_id = absint($params['asset_id'] ?? 0);
   $media_id = absint($params['media_id'] ?? 0);
-
-  // Extrai o slug da URL
-  $post_slug = basename($url); // Obtém o último segmento da URL (slug)
-  if (empty($post_slug)) {
-    return new WP_Error('invalid_url', 'URL do post inválida.', ['status' => 400]);
-  }
-  
-  // Busca o post pelo slug
-  $asset = get_page_by_path($url, OBJECT, 'post');
-  if (!$asset) {
-    return new WP_Error('post_not_found', 'Post não encontrado.', ['status' => 404]);
-  }
-
-  $asset_id = $asset->ID;
+  $media_type = sanitize_text_field($request['media_type']);
 
   // Verifica os IDs
   if ($asset_id <= 0 || $media_id <= 0) {
@@ -67,18 +54,41 @@ function api_media_delete(WP_REST_Request $request) {
     return $error;
   }
 
-  // Verifica se a mídia pertence ao ativo
-  $media_meta = get_post_meta($asset_id, 'previews', false);
-  if (!in_array($media_id, $media_meta)) {
-    return new WP_Error( 'media_not_found', 'Mídia não encontrada ou não pertence ao ativo.', ['status' => 404] );
+  if(empty($media_type)) {
+    return new WP_Error( 'missing_field', 'Informe o tipo de mídia que pretende apagar.', ['status' => 400] );
   }
 
-  // Executa a deleção
-  $attachment_deleted = wp_delete_attachment($media_id, true);
-  $meta_deleted = delete_post_meta($asset_id, 'previews', $media_id);
-
-  if (!$attachment_deleted || !$meta_deleted) {
-    return new WP_Error( 'deletion_failed', 'Erro ao deletar a mídia.', ['status' => 500] );
+  if ($media_type === 'thumbnail') {
+    // Verifica se a mídia é realmente a thumbnail do ativo
+    $current_thumbnail_id = get_post_meta($asset_id, 'thumbnail', true);
+    
+    if ($current_thumbnail_id === $media_id) {     
+      // Executa a deleção
+      $attachment_deleted = wp_delete_attachment($media_id, true);
+      $meta_deleted = delete_post_meta($asset_id, 'thumbnail', $media_id);
+      
+      if (!$attachment_deleted || !$meta_deleted) {
+        return new WP_Error( 'deletion_failed', 'Erro ao deletar a thumbnail.', ['status' => 500] );
+      }
+    }
+  }
+  elseif ($media_type === 'preview') {
+    // Verifica se a mídia pertence ao ativo
+    $media_meta = get_post_meta($asset_id, 'previews', false);
+    if (!in_array($media_id, $media_meta)) {
+      return new WP_Error( 'media_not_found', 'Mídia não encontrada ou não pertence ao ativo.', ['status' => 404] );
+    }
+  
+    // Executa a deleção
+    $attachment_deleted = wp_delete_attachment($media_id, true);
+    $meta_deleted = delete_post_meta($asset_id, 'previews', $media_id);
+  
+    if (!$attachment_deleted || !$meta_deleted) {
+      return new WP_Error( 'deletion_failed', 'Erro ao deletar a mídia.', ['status' => 500] );
+    }
+  }
+  else {
+    return new WP_Error( 'invalid_type', 'Tipo de mídia inválido. Use "thumbnail" ou "preview".', ['status' => 400] );
   }
 
   return rest_ensure_response([
@@ -86,7 +96,8 @@ function api_media_delete(WP_REST_Request $request) {
     'message' => 'Mídia deletada com sucesso.',
     'data' => [
       'asset_id' => $asset_id,
-      'media_id' => $media_id
+      'media_id' => $media_id,
+      'media_type' => $media_type
     ]
   ]);
 }
@@ -102,4 +113,3 @@ function register_api_media_delete() {
 }
 
 add_action('rest_api_init', 'register_api_media_delete');
-?>

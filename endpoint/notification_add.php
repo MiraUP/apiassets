@@ -114,7 +114,19 @@ function send_notification_email(int $user_id, int $post_id, string $subject, st
     $email = sanitize_email($email);
   }
   
-  return wp_mail($email, $subject, $html, $headers);
+  add_action('wp_mail_failed', function ($wp_error) {
+    error_log('Erro ao enviar email: ' . $wp_error->get_error_message());
+  }, 10, 1);
+
+  $sent = wp_mail($email, $subject, $html, $headers);
+    
+  if (!$sent) {
+    error_log('Falha no envio do email para: ' . $email);
+    error_log('Último erro PHP: ' . print_r(error_get_last(), true));
+    return false;
+  }
+    
+  return true;
 }
 
 /**

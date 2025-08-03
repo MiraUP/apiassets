@@ -10,7 +10,7 @@ const TokenPostTEST = () => {
   function handleSubmit(event) {
     event.preventDefault();
     setError('');
-    fetch('http://miraup.test/json/jwt-auth/v1/token', {
+    fetch('https://api.miraup.com.br/json/jwt-auth/v1/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
