@@ -187,36 +187,64 @@ function api_previews_get(WP_REST_Request $request) {
     }
       
       // Aplica busca se houver termo de pesquisa
-      if (!empty($search_term)) {
-        $query_args['s'] = $search_term;
-          
-        // Filtro para incluir tags na busca
-        add_filter('posts_where', function($where, $wp_query) use ($search_term) {
-          global $wpdb;
-          
-          if ($search_term) {
-            // Busca no título
-            $where .= " OR {$wpdb->posts}.post_title LIKE '%" . esc_sql($wpdb->esc_like($search_term)) . "%'";
-            
-            // Busca nas tags
-            $tag_ids = get_terms([
-              'taxonomy' => 'icon_tag',
-              'name__like' => $search_term,
-              'fields' => 'ids',
-              'hide_empty' => false
-            ]);
-            
-            if (!empty($tag_ids)) {
-              $where .= " OR {$wpdb->posts}.ID IN (
-                SELECT object_id FROM {$wpdb->term_relationships}
-                WHERE term_taxonomy_id IN (" . implode(',', array_map('intval', $tag_ids)) . ")
-              )";
-            }
-          }
-            
-          return $where;
-        }, 10, 2);
-      }
+// Aplica busca se houver termo de pesquisa
+if (!empty($search_term)) {
+    // Busca termos da taxonomia icon_tag que correspondem ao termo de pesquisa
+    $matching_tags = get_terms([
+        'taxonomy' => 'icon_tag',
+        'name__like' => $search_term,
+        'fields' => 'ids',
+        'hide_empty' => false
+    ]);
+
+    // Se não encontrou tags correspondentes, retorna vazio imediatamente
+    if (empty($matching_tags)) {
+        return rest_ensure_response([
+            'success' => true,
+            'data' => [
+                'previews' => [],
+                'filters' => [
+                    'categories' => [],
+                    'styles' => [],
+                    'tags' => []
+                ],
+                'pagination' => [
+                    'current_page' => 1,
+                    'per_page' => $per_page,
+                    'total_pages' => 0,
+                    'total_items' => 0
+                ]
+            ]
+        ]);
+    }
+
+    // Busca os attachments com as tags encontradas
+    $query_args = [
+        'post_type' => 'attachment',
+        'post__in' => $all_attachments,
+        'posts_per_page' => -1,
+        'orderby' => $orderby,
+        'order' => $order,
+        'tax_query' => [
+            [
+                'taxonomy' => 'icon_tag',
+                'field' => 'term_id',
+                'terms' => $matching_tags
+            ]
+        ]
+    ];
+
+    $filtered_attachments = get_posts($query_args);
+} else {
+    // Sem termo de busca, retorna todos (com ordenação)
+    $filtered_attachments = get_posts([
+        'post_type' => 'attachment',
+        'post__in' => $all_attachments,
+        'posts_per_page' => -1,
+        'orderby' => $orderby,
+        'order' => $order
+    ]);
+}
       
       $filtered_attachments = get_posts($query_args);
       
